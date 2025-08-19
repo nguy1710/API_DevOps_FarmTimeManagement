@@ -1,26 +1,24 @@
+# azure-pipelines.yml
 trigger:
   branches:
     include:
       - dev
       - main
 
-# nếu muốn CI chỉ chạy khi thay đổi trong src/
-# paths:
-#   include:
-#     - src/**
-
 variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
-  # ĐỔI các biến dưới theo môi trường của bạn
-  azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'   # tên service connection ở bước 2
-  webAppName: 'flindersdevops'        # tên App Service (production)
-  webAppSlot: 'staging'                   # tên slot (đã tạo sẵn), dùng cho nhánh dev
+  # Giữ nguyên các biến môi trường hiện có
+  azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'
+  webAppName: 'flindersdevops'
+  # webAppSlot vẫn giữ lại nếu bạn muốn dùng sau này, nhưng hiện tại KHÔNG dùng
+  webAppSlot: 'staging'
 
 pool:
   name: 'SelfHosted_Agent_Tom'
 
 stages:
+# ===================== BUILD =====================
 - stage: Build
   displayName: Build & Test & Package
   jobs:
@@ -49,73 +47,3 @@ stages:
     - task: DotNetCoreCLI@2
       displayName: Test
       inputs:
-        command: 'test'
-        projects: '**/*Tests/*.csproj'
-        arguments: '--configuration $(buildConfiguration) --collect "XPlat Code Coverage"'
-      continueOnError: true  # nếu chưa có test có thể xóa dòng này
-
-    - task: DotNetCoreCLI@2
-      displayName: Publish (dotnet publish)
-      inputs:
-        command: 'publish'
-        publishWebProjects: true
-        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-
-    - task: ArchiveFiles@2
-      displayName: Zip published output
-      inputs:
-        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/webapp.zip'
-
-    - publish: '$(Build.ArtifactStagingDirectory)/webapp.zip'
-      displayName: 'Publish artifact'
-      artifact: 'drop'
-
-- stage: Deploy_Dev
-  displayName: Deploy to Staging slot (dev branch)
-  dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
-  jobs:
-  - deployment: DeployDev
-    environment: 'dev'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              artifact: 'drop'
-              path: '$(Pipeline.Workspace)/drop'
-          - task: AzureWebApp@1
-            displayName: 'Deploy to $(webAppName) - slot $(webAppSlot)'
-            inputs:
-              azureSubscription: '$(azureServiceConnection)'
-              appName: '$(webAppName)'
-              deployToSlotOrASE: true
-              resourceGroupName: ''   # nếu cần, điền RG chứa App Service
-              slotName: '$(webAppSlot)'
-              package: '$(Pipeline.Workspace)/drop/webapp.zip'
-
-- stage: Deploy_Prod
-  displayName: Deploy to Production (main branch)
-  dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-  jobs:
-  - deployment: DeployProd
-    environment: 'prod'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              artifact: 'drop'
-              path: '$(Pipeline.Workspace)/drop'
-          - task: AzureWebApp@1
-            displayName: 'Deploy to $(webAppName) - production'
-            inputs:
-              azureSubscription: '$(azureServiceConnection)'
-              appName: '$(webAppName)'
-              package: '$(Pipeline.Workspace)/drop/webapp.zip'
