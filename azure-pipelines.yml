@@ -18,7 +18,7 @@ variables:
   webAppSlot: 'staging'                   # tên slot (đã tạo sẵn), dùng cho nhánh dev
 
 pool:
-  vmImage: 'SelfHosted_Agent_Tom'
+  name: 'SelfHosted_Agent_Tom'
 
 stages:
 - stage: Build
