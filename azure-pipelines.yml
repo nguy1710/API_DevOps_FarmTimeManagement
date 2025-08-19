@@ -2,21 +2,20 @@ trigger:
   branches:
     include:
       - dev
-      - master      # production branch của bạn
+      - master
 
 variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
   azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'
   webAppName: 'flindersdevops'
-  # hiện không dùng slot
-  webAppSlot: 'staging'
+  webAppSlot: 'staging'   # chưa dùng slot
 
 pool:
   name: 'SelfHosted_Agent_Tom'
 
 stages:
-# ===================== BUILD (chung cho mọi nhánh) =====================
+# ===================== BUILD (chung) =====================
 - stage: Build
   displayName: Build & Test & Package
   jobs:
@@ -69,7 +68,7 @@ stages:
       displayName: 'Publish deploy artifact'
       artifact: 'drop'
 
-# ===================== TẠO ARTIFACT PROJECT-SRC (chỉ khi master) =====================
+# ===================== ARTIFACT PROJECT-SRC (master/PR->master) =====================
 - stage: Build_Prod_Artifact
   displayName: Build Production Artifact (project-src.zip)
   dependsOn: Build
@@ -89,26 +88,45 @@ stages:
     displayName: 'Package project source'
     steps:
     - powershell: |
-        $src = "$(Build.SourcesDirectory)"
-        $outDir = "$(Build.ArtifactStagingDirectory)\project-src"
-        $zip = "$(Build.ArtifactStagingDirectory)\project-src.zip"
+        $ErrorActionPreference = 'Stop'
+        $src    = "$(Build.SourcesDirectory)"
+        $outDir = Join-Path "$(Build.ArtifactStagingDirectory)" "project-src"
+        $zip    = Join-Path "$(Build.ArtifactStagingDirectory)" "project-src.zip"
+
+        Write-Host "Source: $src"
+        Write-Host "Staging: $outDir"
+        Write-Host "Zip: $zip"
 
         if (Test-Path $outDir) { Remove-Item $outDir -Recurse -Force }
-        New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+        New-Item -ItemType Directory -Path $outDir | Out-Null
 
-        # Copy source, loại bỏ các thư mục không cần
-        robocopy $src $outDir /E /XD ".git" ".github" ".azuredevops" "node_modules" "bin" "obj" ".vs" ".idea" ".vscode" 1>$null
+        # Dùng ROBOCOPY để copy source nhưng loại trừ thư mục rác
+        $excludeDirs = @(".git",".github",".azuredevops","node_modules","bin","obj",".vs",".idea",".vscode")
+        $xd = $excludeDirs | ForEach-Object { "/XD `"$($_)`"" } | Out-String
+        $xd = $xd -replace "`r?`n"," "
+
+        $cmd = "robocopy `"$src`" `"$outDir`" /E $xd /NFL /NDL /NJH /NJS /NC /NS /NP"
+        Write-Host "Running: $cmd"
+        cmd.exe /c $cmd | Out-Null
+
+        $rc = $LASTEXITCODE
+        # Mã trả về 0–7 của ROBOCOPY được coi là thành công
+        if ($rc -gt 7) {
+          throw "ROBOCOPY failed with exit code $rc"
+        } else {
+          Write-Host "ROBOCOPY exit code $rc (OK)"
+        }
 
         if (Test-Path $zip) { Remove-Item $zip -Force }
-        Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
-        [System.IO.Compression.ZipFile]::CreateFromDirectory($outDir, $zip)
+        Compress-Archive -Path (Join-Path $outDir '*') -DestinationPath $zip -Force
+        Write-Host "Created $zip"
       displayName: 'Create project-src.zip'
 
     - publish: '$(Build.ArtifactStagingDirectory)/project-src.zip'
       displayName: 'Publish production source artifact'
       artifact: 'project-src'
 
-# ===================== DEPLOY (đổi tên hiển thị, vẫn deploy Production) =====================
+# ===================== DEPLOY (đổi tên hiển thị, vẫn Production) =====================
 - stage: Deploy_Prod
   displayName: Deploy to Development
   dependsOn:
@@ -136,13 +154,11 @@ stages:
               artifact: 'drop'
               path: '$(Pipeline.Workspace)/drop'
 
-          # Debug: in biến nhánh (an toàn cả Manual/CI/PR)
           - powershell: |
               $b = $env:BUILD_SOURCEBRANCH
               $r = $env:BUILD_REASON
               $t = $env:SYSTEM_PULLREQUEST_TARGETBRANCH
               if (-not $t) { $t = '<not set>' }
-
               Write-Host "Build.SourceBranch              = $b"
               Write-Host "Build.Reason                    = $r"
               Write-Host "System.PullRequest.TargetBranch = $t"
@@ -156,4 +172,3 @@ stages:
               azureSubscription: '$(azureServiceConnection)'
               appName: '$(webAppName)'
               package: '$(Pipeline.Workspace)/drop/webapp.zip'
-              # Không cấu hình slot -> deploy mặc định vào Production
