@@ -47,3 +47,51 @@ stages:
     - task: DotNetCoreCLI@2
       displayName: Test
       inputs:
+        command: 'test'
+        projects: '**/*Tests/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --collect "XPlat Code Coverage"'
+      continueOnError: true
+
+    - task: DotNetCoreCLI@2
+      displayName: Publish (dotnet publish)
+      inputs:
+        command: 'publish'
+        publishWebProjects: true
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+
+    - task: ArchiveFiles@2
+      displayName: Zip published output
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/webapp.zip'
+
+    - publish: '$(Build.ArtifactStagingDirectory)/webapp.zip'
+      displayName: 'Publish artifact'
+      artifact: 'drop'
+
+# ===================== DEPLOY PRODUCTION =====================
+- stage: Deploy_Prod
+  displayName: Deploy to Production (main branch)
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployProd
+    environment: 'prod'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: 'drop'
+              path: '$(Pipeline.Workspace)/drop'
+
+          - task: AzureWebApp@1
+            displayName: 'Deploy to $(webAppName) - production'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              appName: '$(webAppName)'
+              package: '$(Pipeline.Workspace)/drop/webapp.zip'
+              # KHÔNG chỉ định deployToSlotOrASE / slotName -> mặc định deploy vào Production
