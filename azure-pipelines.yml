@@ -2,19 +2,21 @@ trigger:
   branches:
     include:
       - dev
-      - main
+      - master      # đổi từ main -> master
 
 variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
   azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'
   webAppName: 'flindersdevops'
-  webAppSlot: 'staging'   # hiện chưa dùng slot, nhưng giữ lại nếu sau này cần
+  # Không dùng slot, nhưng giữ biến nếu sau này bạn cần
+  webAppSlot: 'staging'
 
 pool:
   name: 'SelfHosted_Agent_Tom'
 
 stages:
+# ===================== BUILD =====================
 - stage: Build
   displayName: Build & Test & Package
   jobs:
@@ -69,9 +71,20 @@ stages:
 
 # ===================== DEPLOY PRODUCTION =====================
 - stage: Deploy_Prod
-  displayName: Deploy to Production (main branch)
+  displayName: Deploy to Production
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  # Chạy khi build OK và (push vào master hoặc PR target master)
+  condition: >
+    and(
+      succeeded(),
+      or(
+        eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+        and(
+          eq(variables['Build.Reason'], 'PullRequest'),
+          eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/master')
+        )
+      )
+    )
   jobs:
   - deployment: DeployProd
     environment: 'prod'
@@ -84,7 +97,7 @@ stages:
               artifact: 'drop'
               path: '$(Pipeline.Workspace)/drop'
 
-          # Block debug in ra biến
+          # Debug: in ra biến để kiểm tra nếu còn bị skip
           - powershell: |
               Write-Host "Build.SourceBranch              = $(Build.SourceBranch)"
               Write-Host "Build.Reason                    = $(Build.Reason)"
@@ -98,3 +111,4 @@ stages:
               azureSubscription: '$(azureServiceConnection)'
               appName: '$(webAppName)'
               package: '$(Pipeline.Workspace)/drop/webapp.zip'
+              # KHÔNG cấu hình slot -> deploy mặc định vào Production
