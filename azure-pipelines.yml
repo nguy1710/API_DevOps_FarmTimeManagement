@@ -1,4 +1,3 @@
-# azure-pipelines.yml
 trigger:
   branches:
     include:
@@ -8,17 +7,14 @@ trigger:
 variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
-  # Giữ nguyên các biến như bạn đang dùng
   azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'
   webAppName: 'flindersdevops'
-  # Chưa dùng slot, nhưng giữ lại biến nếu sau này cần
-  webAppSlot: 'staging'
+  webAppSlot: 'staging'   # hiện chưa dùng slot, nhưng giữ lại nếu sau này cần
 
 pool:
   name: 'SelfHosted_Agent_Tom'
 
 stages:
-# ===================== BUILD =====================
 - stage: Build
   displayName: Build & Test & Package
   jobs:
@@ -73,20 +69,9 @@ stages:
 
 # ===================== DEPLOY PRODUCTION =====================
 - stage: Deploy_Prod
-  displayName: Deploy to Production
+  displayName: Deploy to Production (main branch)
   dependsOn: Build
-  # Chạy khi build thành công VÀ (push vào main HOẶC PR target main)
-  condition: >
-    and(
-      succeeded(),
-      or(
-        eq(variables['Build.SourceBranch'], 'refs/heads/main'),
-        and(
-          eq(variables['Build.Reason'], 'PullRequest'),
-          eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/main')
-        )
-      )
-    )
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
   - deployment: DeployProd
     environment: 'prod'
@@ -99,7 +84,7 @@ stages:
               artifact: 'drop'
               path: '$(Pipeline.Workspace)/drop'
 
-          # In biến để debug nếu còn bị skip (tuỳ chọn)
+          # Block debug in ra biến
           - powershell: |
               Write-Host "Build.SourceBranch              = $(Build.SourceBranch)"
               Write-Host "Build.Reason                    = $(Build.Reason)"
@@ -113,4 +98,3 @@ stages:
               azureSubscription: '$(azureServiceConnection)'
               appName: '$(webAppName)'
               package: '$(Pipeline.Workspace)/drop/webapp.zip'
-              # KHÔNG cấu hình deployToSlotOrASE/slotName -> mặc định deploy Production
