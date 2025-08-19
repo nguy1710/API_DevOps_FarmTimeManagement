@@ -8,10 +8,10 @@ trigger:
 variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
-  # Giữ nguyên các biến môi trường hiện có
+  # Giữ nguyên các biến như bạn đang dùng
   azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'
   webAppName: 'flindersdevops'
-  # webAppSlot vẫn giữ lại nếu bạn muốn dùng sau này, nhưng hiện tại KHÔNG dùng
+  # Chưa dùng slot, nhưng giữ lại biến nếu sau này cần
   webAppSlot: 'staging'
 
 pool:
@@ -73,9 +73,20 @@ stages:
 
 # ===================== DEPLOY PRODUCTION =====================
 - stage: Deploy_Prod
-  displayName: Deploy to Production (main branch)
+  displayName: Deploy to Production
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  # Chạy khi build thành công VÀ (push vào main HOẶC PR target main)
+  condition: >
+    and(
+      succeeded(),
+      or(
+        eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+        and(
+          eq(variables['Build.Reason'], 'PullRequest'),
+          eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/main')
+        )
+      )
+    )
   jobs:
   - deployment: DeployProd
     environment: 'prod'
@@ -88,10 +99,18 @@ stages:
               artifact: 'drop'
               path: '$(Pipeline.Workspace)/drop'
 
+          # In biến để debug nếu còn bị skip (tuỳ chọn)
+          - powershell: |
+              Write-Host "Build.SourceBranch              = $(Build.SourceBranch)"
+              Write-Host "Build.Reason                    = $(Build.Reason)"
+              Write-Host "System.PullRequest.TargetBranch = $(System.PullRequest.TargetBranch)"
+              Write-Host "Package path                    = $(Pipeline.Workspace)\drop\webapp.zip"
+            displayName: 'Print branch variables'
+
           - task: AzureWebApp@1
             displayName: 'Deploy to $(webAppName) - production'
             inputs:
               azureSubscription: '$(azureServiceConnection)'
               appName: '$(webAppName)'
               package: '$(Pipeline.Workspace)/drop/webapp.zip'
-              # KHÔNG chỉ định deployToSlotOrASE / slotName -> mặc định deploy vào Production
+              # KHÔNG cấu hình deployToSlotOrASE/slotName -> mặc định deploy Production
