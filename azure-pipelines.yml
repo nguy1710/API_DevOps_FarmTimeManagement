@@ -2,20 +2,21 @@ trigger:
   branches:
     include:
       - dev
-      - master      # dùng master thay vì main
+      - master      # production branch của bạn
 
 variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
   azureServiceConnection: 'ServiceConnection_RestAPI_FarmTimeManagement'
   webAppName: 'flindersdevops'
-  webAppSlot: 'staging'   # hiện chưa dùng slot, giữ lại nếu sau này cần
+  # hiện không dùng slot
+  webAppSlot: 'staging'
 
 pool:
   name: 'SelfHosted_Agent_Tom'
 
 stages:
-# ===================== BUILD =====================
+# ===================== BUILD (chung cho mọi nhánh) =====================
 - stage: Build
   displayName: Build & Test & Package
   jobs:
@@ -65,14 +66,53 @@ stages:
         archiveFile: '$(Build.ArtifactStagingDirectory)/webapp.zip'
 
     - publish: '$(Build.ArtifactStagingDirectory)/webapp.zip'
-      displayName: 'Publish artifact'
+      displayName: 'Publish deploy artifact'
       artifact: 'drop'
 
-# ===================== DEPLOY PRODUCTION =====================
-- stage: Deploy_Prod
-  displayName: Deploy to Production
+# ===================== TẠO ARTIFACT PROJECT-SRC (chỉ khi master) =====================
+- stage: Build_Prod_Artifact
+  displayName: Build Production Artifact (project-src.zip)
   dependsOn: Build
-  # Chạy khi build OK và (push vào master hoặc PR target master)
+  condition: >
+    and(
+      succeeded(),
+      or(
+        eq(variables['Build.SourceBranch'], 'refs/heads/master'),
+        and(
+          eq(variables['Build.Reason'], 'PullRequest'),
+          eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/master')
+        )
+      )
+    )
+  jobs:
+  - job: PackageSource
+    displayName: 'Package project source'
+    steps:
+    - powershell: |
+        $src = "$(Build.SourcesDirectory)"
+        $outDir = "$(Build.ArtifactStagingDirectory)\project-src"
+        $zip = "$(Build.ArtifactStagingDirectory)\project-src.zip"
+
+        if (Test-Path $outDir) { Remove-Item $outDir -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+        # Copy source, loại bỏ các thư mục không cần
+        robocopy $src $outDir /E /XD ".git" ".github" ".azuredevops" "node_modules" "bin" "obj" ".vs" ".idea" ".vscode" 1>$null
+
+        if (Test-Path $zip) { Remove-Item $zip -Force }
+        Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($outDir, $zip)
+      displayName: 'Create project-src.zip'
+
+    - publish: '$(Build.ArtifactStagingDirectory)/project-src.zip'
+      displayName: 'Publish production source artifact'
+      artifact: 'project-src'
+
+# ===================== DEPLOY (đổi tên hiển thị, vẫn deploy Production) =====================
+- stage: Deploy_Prod
+  displayName: Deploy to Development
+  dependsOn:
+    - Build
   condition: >
     and(
       succeeded(),
@@ -96,7 +136,7 @@ stages:
               artifact: 'drop'
               path: '$(Pipeline.Workspace)/drop'
 
-          # Block debug in biến nhánh (không lỗi khi Manual run)
+          # Debug: in biến nhánh (an toàn cả Manual/CI/PR)
           - powershell: |
               $b = $env:BUILD_SOURCEBRANCH
               $r = $env:BUILD_REASON
@@ -111,7 +151,7 @@ stages:
             failOnStderr: false
 
           - task: AzureWebApp@1
-            displayName: 'Deploy to $(webAppName) - production'
+            displayName: 'Deploy to $(webAppName) (Production slot)'
             inputs:
               azureSubscription: '$(azureServiceConnection)'
               appName: '$(webAppName)'
