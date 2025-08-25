@@ -46,6 +46,9 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
             return Ok(list);
         }
 
+ 
+
+
         // GET: api/biometric/5
         [HttpGet("{id:int}")]
         public async Task<ActionResult<BiometricData>> Get(int id)

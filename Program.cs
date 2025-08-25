@@ -1,4 +1,4 @@
-
+﻿
 namespace RestfulAPI_FarmTimeManagement
 {
     public class Program
@@ -16,7 +16,17 @@ namespace RestfulAPI_FarmTimeManagement
 
 
 
-             
+
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Hello you guys",
+                    Version = "V1",
+                    Description = "Just a demo"
+                     
+                });
+            });
 
 
             var app = builder.Build();
@@ -29,9 +39,11 @@ namespace RestfulAPI_FarmTimeManagement
             //}
 
             app.UseSwagger();
-            app.UseSwaggerUI();
 
-             
+              app.UseSwaggerUI();
+
+
+
 
             app.UseHttpsRedirection();
 
