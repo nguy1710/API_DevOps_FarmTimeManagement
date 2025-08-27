@@ -21,7 +21,7 @@ namespace RestfulAPI_FarmTimeManagement
             {
                 c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
                 {
-                    Title = "Hello you guys",
+                    Title = "I am Kevin",
                     Version = "V1",
                     Description = "Just a demo"
                      
