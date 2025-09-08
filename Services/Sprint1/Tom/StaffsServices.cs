@@ -26,7 +26,23 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
             List<Staff> result = await staffsService.QueryStaff(querystring);
             if (result.Count == 1)
             {
+
                 Staff staff = result[0];
+
+                if (staff.Role !="Admin")
+                {
+                    History history_notadmin = new History
+                    {
+                        Action = "Login",
+                        Details = "User was not admin",
+                        Actor = username,
+                        Result = "Failed",
+                    };
+                    History result_notadmin = await HistoryServices.CreateHistory(history_notadmin);
+                    throw new Exception($"User {staff.FirstName} {staff.LastName} was not admin");
+
+                }
+
                 History history = new History
                 {
                     Action = "Login",
@@ -93,7 +109,9 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
             List<Staff> result = await staffsService.QueryStaff(querystring);
             if (result.Count == 1)
             {
-                return result[0];
+                Staff staff = result[0];
+                staff.Password = null; // do not return password
+                return staff;
             }
             throw new Exception("Staff not found");
 
@@ -105,8 +123,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
         public static async Task<Staff> CreateStaff(Staff staff)
         {
             StaffConnects staffsService = new StaffConnects();
-            HistoryConnects historiesService = new HistoryConnects();
-
+ 
             bool isStaffexsit = await is_Staff_exist(staff.Email);
             if (isStaffexsit)
             {
@@ -128,7 +145,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                         Actor = staff.Email,
                         Result = "Succeed",
                     };
-                    History result_hiscreated = await historiesService.CreateHistory(history);
+                    History result_hiscreated = await HistoryServices.CreateHistory(history);
 
                     if (result_hiscreated != null)
                     {
@@ -147,8 +164,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
         public static async Task<Staff> UpdateStaff(int id, Staff staff)
         {
             StaffConnects staffConnects = new StaffConnects();
-            HistoryConnects historiesService = new HistoryConnects();
-
+ 
             var existingStaff = await GetStaffById(id);
             if (existingStaff == null)
             {
@@ -167,7 +183,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                     Actor = staff.Email,
                     Result = "Succeed",
                 };
-                History result_hiscreated = await historiesService.CreateHistory(history);
+                History result_hiscreated = await HistoryServices.CreateHistory(history);
 
                 if (result_hiscreated != null)
                 {
@@ -182,8 +198,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
         public static async Task<Staff> DeleteStaff(int id)
         {
             StaffConnects staffConnects = new StaffConnects();
-            HistoryConnects historiesService = new HistoryConnects();
-
+ 
 
 
             var existingStaff = await GetStaffById(id);
@@ -204,7 +219,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                     Actor = result.Email,
                     Result = "Succeed",
                 };
-                History result_hiscreated = await historiesService.CreateHistory(history);
+                History result_hiscreated = await HistoryServices.CreateHistory(history);
 
                 if (result_hiscreated != null)
                 {

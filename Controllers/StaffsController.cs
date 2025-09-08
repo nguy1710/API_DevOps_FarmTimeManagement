@@ -63,6 +63,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] object body)
         {
+            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
 
             Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString()); 
 
@@ -77,6 +78,9 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] object body)
         {
+
+            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
+
             Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString());
 
             Staff staff_updated = await StaffsServices.UpdateStaff(id, staff);
@@ -88,7 +92,9 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
- 
+            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
+
+
             Staff staff_deleted = await StaffsServices.DeleteStaff(id);
 
             return new OkObjectResult(JsonConvert.SerializeObject(staff_deleted));
