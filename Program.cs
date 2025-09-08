@@ -32,9 +32,7 @@ namespace RestfulAPI_FarmTimeManagement
 
 
 
-
-
-
+             
 
 
 
@@ -45,8 +43,8 @@ namespace RestfulAPI_FarmTimeManagement
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            builder.Services.AddTransient<RestfulAPI_FarmTimeManagement.Services.StaffsService>();
-            builder.Services.AddTransient<RestfulAPI_FarmTimeManagement.Services.HistoriesService>();
+            //builder.Services.AddTransient<RestfulAPI_FarmTimeManagement.Services.StaffsConnects>();
+            //builder.Services.AddTransient<RestfulAPI_FarmTimeManagement.Services.HistoriesService>();
 
 
 
@@ -56,7 +54,7 @@ namespace RestfulAPI_FarmTimeManagement
                 {
                     Title = "API document for Farm Time Management",
                     Version = "V1",
-                    Description = "Sprint-1"
+                    Description = "Sprint-2"
                      
                 });
             });

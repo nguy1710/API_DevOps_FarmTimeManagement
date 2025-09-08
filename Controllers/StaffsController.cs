@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Newtonsoft.Json;
+using RestfulAPI_FarmTimeManagement.DataConnects;
 using RestfulAPI_FarmTimeManagement.Models; // Đổi "MyApi" thành namespace thực tế của bạn
 using RestfulAPI_FarmTimeManagement.Services;
+using RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom;
 using System.Data;
 
 namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành namespace thực tế của bạn
@@ -13,50 +16,60 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
     {
 
 
-        private readonly StaffsService _svc;
-        public StaffsController(StaffsService svc)
+    
+        public StaffsController()
         {
-            _svc = svc;
+            
+
         }
+
+
 
         // GET: api/staffs?query=SELECT * FROM Staff WHERE role='Admin'
         // hoặc để trống -> trả toàn bộ staff
         [HttpGet]
         public async Task<IActionResult> Query([FromQuery] string? query)
-        {
-            var json = await _svc.QueryStaffAsync(query, HttpContext.RequestAborted);
-            return Content(json, "application/json");
-        }
+        { 
+           List<Staff> staffs =  await StaffsServices.GetAllStaffs();  
+           return new OkObjectResult(JsonConvert.SerializeObject(staffs)); 
+         }
 
 
         [HttpPost("query")]
         public async Task<IActionResult> QueryWithBody([FromBody] string query)
-        { 
+        {
 
-            var json = await _svc.QueryStaffAsync(query, HttpContext.RequestAborted);
-            return Content(json, "application/json");
+            List<Staff> staffs = await StaffsServices.QuerryStaffs(query);
+            return new OkObjectResult(JsonConvert.SerializeObject(staffs));
+
         }
          
 
 
 
-        // GET: api/staffs/5  (dùng QueryStaffAsync phía service)
+        // GET: api/staffs/5 
+
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var sql = $"SELECT * FROM Staff WHERE staffId = {id}";
-            var json = await _svc.QueryStaffAsync(sql, HttpContext.RequestAborted);
-            return Content(json, "application/json");
+            Staff staff = await StaffsServices.GetStaffById(id);
+            return new OkObjectResult(JsonConvert.SerializeObject(staff));
         }
+
+
 
         // POST: api/staffs
         // Body: JSON object của Staff (password có thể null; service sẽ INSERT và trả JSON bản ghi mới)
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] object body)
         {
-            var jsonBody = body?.ToString() ?? "{}";
-            var json = await _svc.CreateStaffAsync(jsonBody, HttpContext.RequestAborted);
-            return Content(json, "application/json");
+
+            Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString()); 
+
+            Staff staff_created = await StaffsServices.CreateStaff(staff);
+
+            return new OkObjectResult(JsonConvert.SerializeObject(staff_created));
+
         }
 
         // PUT: api/staffs/5
@@ -64,17 +77,21 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] object body)
         {
-            var jsonBody = body?.ToString() ?? "{}";
-            var json = await _svc.UpdateStaffAsync(id, jsonBody, HttpContext.RequestAborted);
-            return Content(json, "application/json");
+            Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString());
+
+            Staff staff_updated = await StaffsServices.UpdateStaff(id, staff);
+
+            return new OkObjectResult(JsonConvert.SerializeObject(staff_updated));
         }
 
         // DELETE: api/staffs/5
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var json = await _svc.DeleteStaffAsync(id, HttpContext.RequestAborted);
-            return Content(json, "application/json");
+ 
+            Staff staff_deleted = await StaffsServices.DeleteStaff(id);
+
+            return new OkObjectResult(JsonConvert.SerializeObject(staff_deleted));
         }
 
          
@@ -83,20 +100,17 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] object body)
         {
-            var jsonBody = body?.ToString() ?? "{}";
 
-            var json = await _svc.LoginAsync(jsonBody, HttpContext, HttpContext.RequestAborted);
-
-
-            if(!string.IsNullOrEmpty(json))
-            {
-              //  return Content(json, "application/json");
-                return new OkObjectResult(json);
-            }
+            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
 
 
-            return new BadRequestObjectResult("Wrong username or password!");
+            Dictionary<string, string> dic = JsonConvert.DeserializeObject<Dictionary<string, string>>(body.ToString());
 
+            string username = dic.ContainsKey("Email") ? dic["Email"] : "";
+            string password = dic.ContainsKey("Password") ? dic["Password"] : "";
+
+            Staff staff_login = await StaffsServices.Login(username,password);
+            return new OkObjectResult(JsonConvert.SerializeObject(staff_login)); 
 
 
 
