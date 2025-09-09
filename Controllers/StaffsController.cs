@@ -15,13 +15,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
     public class StaffsController : ControllerBase
     {
 
-
-    
-        public StaffsController()
-        {
-            
-
-        }
+         
 
 
 

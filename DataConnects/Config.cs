@@ -1,4 +1,6 @@
-﻿namespace RestfulAPI_FarmTimeManagement.DataConnects
+﻿using RestfulAPI_FarmTimeManagement.Models;
+
+namespace RestfulAPI_FarmTimeManagement.DataConnects
 {
     public static class Config
     { 
@@ -9,6 +11,7 @@
 
         public static string client_ip = ":";
 
+ 
 
     }
 }
