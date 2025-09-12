@@ -44,56 +44,91 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tom
 
 
 
-        public static async Task<Biometric?> CreateBiometric(Biometric item)
+        public static async Task<Biometric> CreateBiometric(Biometric item, HttpContext httpContext)
         {
             var connects = new BiometricConnects();
+
+            var staff =   await  BiometricServices.GetStaff_From_Bio_Card(item.Data);
+            if (staff != null)
+            {
+                return new Biometric
+                {
+                    BiometricId = -1,
+                    StaffId = item?.StaffId ?? 0,
+                    Type = item?.Type ?? string.Empty,
+                    Data = "Failed due to duplicate Card Data."
+                };
+            }
+
             var created = await connects.CreateBiometric(item);
 
-            // Log history giống DeviceServices
-            History history = new History
+            if (created != null)
             {
-                Action = "Create biometric",
-                Details = $"Biometric {created?.Type} for StaffId={created?.StaffId} was created.",
-                Result = "Succeed"
-            };
-            var his = await HistoryServices.CreateHistory(history);
-            if (his != null) return created;
+                var his = await HistoryServices.CreateHistory(
+                    "Create biometric",
+                    "Succeed",
+                    $"Biometric {created.Type} for StaffId={created.StaffId} was created.",
+                    httpContext
+                );
+                if (his != null) return created;
+            }
 
-            throw new Exception("Create biometric failed");
+            return new Biometric
+            {
+                BiometricId = -1,
+                StaffId = item?.StaffId ?? 0,
+                Type = item?.Type ?? string.Empty,
+                Data = "Failed due to system issue."
+            };
         }
 
-        public static async Task<Biometric?> UpdateBiometric(int id, Biometric item)
+        public static async Task<Biometric> UpdateBiometric(int id, Biometric item, HttpContext httpContext)
         {
             var connects = new BiometricConnects();
             var updated = await connects.UpdateBiometric(id, item);
-
-            History history = new History
+            if (updated != null)
             {
-                Action = "Update biometric",
-                Details = $"Biometric {updated?.Type} for StaffId={updated?.StaffId} was updated.",
-                Result = "Succeed"
-            };
-            var his = await HistoryServices.CreateHistory(history);
-            if (his != null) return updated;
+                var his = await HistoryServices.CreateHistory(
+                    "Update biometric",
+                    "Succeed",
+                    $"Biometric {updated.Type} for StaffId={updated.StaffId} was updated.",
+                    httpContext
+                );
+                if (his != null) return updated;
+            }
 
-            throw new Exception("Update biometric failed");
+            return new Biometric
+            {
+                BiometricId = -1,
+                StaffId = item?.StaffId ?? 0,
+                Type = item?.Type ?? string.Empty,
+                Data = "Failed due to system issue."
+            };
         }
 
-        public static async Task<Biometric?> DeleteBiometric(int id)
+        public static async Task<Biometric> DeleteBiometric(int id, HttpContext httpContext)
         {
             var connects = new BiometricConnects();
             var deleted = await connects.DeleteBiometric(id);
 
-            History history = new History
+            if (deleted != null)
             {
-                Action = "Delete biometric",
-                Details = $"Biometric {deleted?.Type} for StaffId={deleted?.StaffId} was deleted.",
-                Result = "Succeed"
-            };
-            var his = await HistoryServices.CreateHistory(history);
-            if (his != null) return deleted;
+                var his = await HistoryServices.CreateHistory(
+                    "Delete biometric",
+                    "Succeed",
+                    $"Biometric {deleted.Type} for StaffId={deleted.StaffId} was deleted.",
+                    httpContext
+                );
+                if (his != null) return deleted;
+            }
 
-            throw new Exception("Delete biometric failed");
+            return new Biometric
+            {
+                BiometricId = -1,
+                StaffId = 0,
+                Type = string.Empty,
+                Data = "Failed due to system issue."
+            };
         }
     }
 }

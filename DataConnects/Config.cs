@@ -9,7 +9,7 @@ namespace RestfulAPI_FarmTimeManagement.DataConnects
 
 
 
-        public static string client_ip = ":";
+     //   public static string client_ip = ":";
 
  
 

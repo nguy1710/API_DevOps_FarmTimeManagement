@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using RestfulAPI_FarmTimeManagement.DataConnects;          // Config
 using RestfulAPI_FarmTimeManagement.Models;
@@ -10,8 +12,11 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+     
+
     public class BiometricsController : ControllerBase
     {
+        [AllowAnonymous]
         // GET: api/biometrics
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -20,6 +25,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
             return new OkObjectResult(JsonConvert.SerializeObject(rows));
         }
 
+        [AllowAnonymous]
         // POST: api/biometrics/query
         // Body: chuỗi SQL SELECT tuỳ ý
         [HttpPost("query")]
@@ -29,6 +35,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
             return new OkObjectResult(JsonConvert.SerializeObject(rows));
         }
 
+        [AllowAnonymous]
         // GET: api/biometrics/5
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
@@ -41,7 +48,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
 
 
-
+        [AllowAnonymous]
         // GET: api/biometrics/5
         [HttpGet("scanfromcard/{result}")]
         public async Task<IActionResult> GetStaff_fromCard(string result)
@@ -59,9 +66,14 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] object body)
         {
-            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
-            var item = JsonConvert.DeserializeObject<Biometric>(body.ToString());
-            var created = await BiometricServices.CreateBiometric(item);
+             var item = JsonConvert.DeserializeObject<Biometric>(body.ToString());
+            var created = await BiometricServices.CreateBiometric(item,HttpContext);
+
+            if (created.BiometricId == -1)
+            {
+                return Unauthorized(new { message = created.Data });
+            }
+
             return new OkObjectResult(JsonConvert.SerializeObject(created));
         }
 
@@ -70,9 +82,15 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] object body)
         {
-            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
-            var item = JsonConvert.DeserializeObject<Biometric>(body.ToString());
-            var updated = await BiometricServices.UpdateBiometric(id, item);
+             var item = JsonConvert.DeserializeObject<Biometric>(body.ToString());
+            var updated = await BiometricServices.UpdateBiometric(id, item,HttpContext);
+
+
+            if (updated.BiometricId == -1)
+            {
+                return Unauthorized(new { message = updated.Data });
+            }
+
             return new OkObjectResult(JsonConvert.SerializeObject(updated));
         }
 
@@ -80,8 +98,14 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
-            var deleted = await BiometricServices.DeleteBiometric(id);
+             var deleted = await BiometricServices.DeleteBiometric(id,HttpContext);
+
+
+            if (deleted.BiometricId == -1)
+            {
+                return Unauthorized(new { message = deleted.Data });
+            }
+
             return new OkObjectResult(JsonConvert.SerializeObject(deleted));
         }
     }

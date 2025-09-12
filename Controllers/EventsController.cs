@@ -5,6 +5,7 @@ using RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tom; // EventServices
 using RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom;  // HistoryServices.GetClientIp
 using RestfulAPI_FarmTimeManagement.DataConnects;          // Config
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace RestfulAPI_FarmTimeManagement.Controllers
 {
@@ -38,12 +39,13 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
             return new OkObjectResult(JsonConvert.SerializeObject(evt));
         }
 
+
+
         // POST: api/events
         // Body: JSON của Event
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] object body)
         {
-            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
             var item = JsonConvert.DeserializeObject<Event>(body.ToString());
             var created = await EventServices.CreateEvent(item);
             return new OkObjectResult(JsonConvert.SerializeObject(created));
@@ -95,24 +97,23 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
 
 
-
+        [Authorize]
         // PUT: api/events/5
         // Body: JSON của Event
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] object body)
         {
-            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
-            var item = JsonConvert.DeserializeObject<Event>(body.ToString());
-            var updated = await EventServices.UpdateEvent(id, item);
+             var item = JsonConvert.DeserializeObject<Event>(body.ToString());
+            var updated = await EventServices.UpdateEvent(id, item,HttpContext);
             return new OkObjectResult(JsonConvert.SerializeObject(updated));
         }
 
+        [Authorize]
         // DELETE: api/events/5
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            Config.client_ip = HistoryServices.GetClientIp(HttpContext);
-            var deleted = await EventServices.DeleteEvent(id);
+             var deleted = await EventServices.DeleteEvent(id,HttpContext);
             return new OkObjectResult(JsonConvert.SerializeObject(deleted));
         }
     }

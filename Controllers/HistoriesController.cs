@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using RestfulAPI_FarmTimeManagement.Models;
 using RestfulAPI_FarmTimeManagement.Services;
@@ -10,6 +11,8 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+   
+
     public class HistoriesController : ControllerBase
     {
         
@@ -33,26 +36,21 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
 
 
-        //[HttpGet("{id:int}")]
-        //public async Task<IActionResult> GetById(int id)
+
+
+        ////No need to create history
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromBody] object body)
         //{
-          
+        //    History history = JsonConvert.DeserializeObject<History>(body.ToString());
+
+
+        //    History history_created = await HistoryServices.CreateHistory(history);
+
+        //    return new OkObjectResult(JsonConvert.SerializeObject(history_created));
         //}
 
-
-
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] object body)
-        {
-            History history = JsonConvert.DeserializeObject<History>(body.ToString());
-
-
-            History history_created = await HistoryServices.CreateHistory(history);
-
-            return new OkObjectResult(JsonConvert.SerializeObject(history_created));
-        }
-
-
+        [Authorize] 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

@@ -1,5 +1,6 @@
-﻿using RestfulAPI_FarmTimeManagement.Models;
+﻿using Microsoft.AspNetCore.Http;
 using RestfulAPI_FarmTimeManagement.DataConnects;
+using RestfulAPI_FarmTimeManagement.Models;
 using System.Net;
 
 namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
@@ -25,21 +26,31 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
             List<History> result = await HistoryConnects.QueryHistory(querystring);
             return result;
         }
+         
 
 
-
-
-        public static async Task<History> CreateHistory(History history)
+        public static async Task<History> CreateHistory(
+            string action, 
+            string result, 
+            string detail, 
+            HttpContext httpContext)
         {
-            HistoryConnects HistoryConnects = new HistoryConnects();
-             
+            
+                var creator_staff = httpContext.Items["Staff"] as Staff;
+                HistoryConnects HistoryConnects = new HistoryConnects();
+                string ip = HistoryServices.GetClientIp(httpContext);
 
-            history.Timestamp = DateTime.UtcNow;
-            history.Ip = Config.client_ip;
-
-
-            var result = await HistoryConnects.CreateHistory(history);
-            return result;
+                History history = new History
+                {
+                    Timestamp = DateTime.Now,
+                    Ip = ip,
+                    Actor = $"{creator_staff.FirstName} | {creator_staff.Email}",
+                    Action = action,
+                    Result = result,
+                    Details = detail,
+                };
+                var resultcreate = await HistoryConnects.CreateHistory(history);
+                return resultcreate; 
         }
 
 
@@ -56,7 +67,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
 
 
         //Get IP from client.
-        public static string? GetClientIp(HttpContext ctx)
+        private static string? GetClientIp(HttpContext ctx)
         {
 
             // Ưu tiên header khi đứng sau proxy/CDN
