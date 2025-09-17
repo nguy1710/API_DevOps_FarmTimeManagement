@@ -113,14 +113,12 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
                     var validationResult = await RosterValidationService.ValidateClockIn(staffid);
                     if (!validationResult.IsValid)
                     {
-                        return BadRequest(new
-                        {
-                            success = false,
-                            message = validationResult.Message,
-                            validationCode = validationResult.ValidationCode,
-                            rosterInfo = validationResult.RosterInfo,
-                            timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                        });
+                        var errorResponse = MessageFormatterService.FormatValidationError(
+                            validationResult.Message,
+                            validationResult.ValidationCode,
+                            validationResult.RosterInfo);
+
+                        return BadRequest(errorResponse);
                     }
                 }
                 else
@@ -155,32 +153,39 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
                         HttpContext
                     );
 
-                    return Ok(new
+                    // Use Tim's message formatter for PBI 8.3.2 compliance
+                    if (bypassValidation)
                     {
-                        success = true,
-                        message = $"Clock-in recorded successfully at {created.Timestamp:HH:mm}",
-                        eventId = created.EventId,
-                        timestamp = created.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
-                        enhanced = true,
-                        validationType = bypassValidation ? "admin_override" : "roster_validated"
-                    });
+                        var currentStaff = HttpContext.Items["Staff"] as Staff;
+                        var adminName = currentStaff != null ? $"{currentStaff.FirstName} {currentStaff.LastName}" : "Administrator";
+                        var formattedResponse = MessageFormatterService.FormatAdminOverrideSuccess(
+                            created, "Clock-in", overrideReason, adminName);
+
+                        return Ok(formattedResponse);
+                    }
+                    else
+                    {
+                        var staff = await StaffsServices.GetStaffById(staffid);
+                        var staffName = staff != null ? $"{staff.FirstName} {staff.LastName}" : null;
+                        var formattedResponse = MessageFormatterService.FormatClockInSuccess(created, staffName);
+
+                        return Ok(formattedResponse);
+                    }
                 }
 
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to create clock-in event",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var systemErrorResponse = MessageFormatterService.FormatSystemError(
+                    "Failed to create clock-in event",
+                    "Please check your network connection and try again.");
+
+                return StatusCode(500, systemErrorResponse);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = $"Enhanced clock-in failed: {ex.Message}",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var systemErrorResponse = MessageFormatterService.FormatSystemError(
+                    $"Enhanced clock-in failed: {ex.Message}",
+                    "Please contact support if the problem persists.");
+
+                return StatusCode(500, systemErrorResponse);
             }
         }
 
@@ -206,14 +211,12 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
                     var validationResult = await RosterValidationService.ValidateClockOut(staffid);
                     if (!validationResult.IsValid)
                     {
-                        return BadRequest(new
-                        {
-                            success = false,
-                            message = validationResult.Message,
-                            validationCode = validationResult.ValidationCode,
-                            rosterInfo = validationResult.RosterInfo,
-                            timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                        });
+                        var errorResponse = MessageFormatterService.FormatValidationError(
+                            validationResult.Message,
+                            validationResult.ValidationCode,
+                            validationResult.RosterInfo);
+
+                        return BadRequest(errorResponse);
                     }
                 }
                 else
@@ -248,32 +251,39 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
                         HttpContext
                     );
 
-                    return Ok(new
+                    // Use Tim's message formatter for PBI 8.4.2 compliance
+                    if (bypassValidation)
                     {
-                        success = true,
-                        message = $"Clock-out recorded successfully at {created.Timestamp:HH:mm}",
-                        eventId = created.EventId,
-                        timestamp = created.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
-                        enhanced = true,
-                        validationType = bypassValidation ? "admin_override" : "roster_validated"
-                    });
+                        var currentStaff = HttpContext.Items["Staff"] as Staff;
+                        var adminName = currentStaff != null ? $"{currentStaff.FirstName} {currentStaff.LastName}" : "Administrator";
+                        var formattedResponse = MessageFormatterService.FormatAdminOverrideSuccess(
+                            created, "Clock-out", overrideReason, adminName);
+
+                        return Ok(formattedResponse);
+                    }
+                    else
+                    {
+                        var staff = await StaffsServices.GetStaffById(staffid);
+                        var staffName = staff != null ? $"{staff.FirstName} {staff.LastName}" : null;
+                        var formattedResponse = MessageFormatterService.FormatClockOutSuccess(created, staffName);
+
+                        return Ok(formattedResponse);
+                    }
                 }
 
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Failed to create clock-out event",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var systemErrorResponse = MessageFormatterService.FormatSystemError(
+                    "Failed to create clock-out event",
+                    "Please check your network connection and try again.");
+
+                return StatusCode(500, systemErrorResponse);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = $"Enhanced clock-out failed: {ex.Message}",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var systemErrorResponse = MessageFormatterService.FormatSystemError(
+                    $"Enhanced clock-out failed: {ex.Message}",
+                    "Please contact support if the problem persists.");
+
+                return StatusCode(500, systemErrorResponse);
             }
         }
 
@@ -290,29 +300,19 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
                 var nextShift = await RosterValidationService.GetNextScheduledShift(staffId);
                 var staff = await StaffsServices.GetStaffById(staffId);
 
-                return Ok(new
-                {
-                    staffId = staffId,
-                    staffName = $"{staff.FirstName} {staff.LastName}",
-                    hasRosterToday = hasRosterToday,
-                    nextShift = nextShift != null ? new
-                    {
-                        date = nextShift.StartTime.ToString("yyyy-MM-dd"),
-                        startTime = nextShift.StartTime.ToString("HH:mm"),
-                        endTime = nextShift.EndTime.ToString("HH:mm"),
-                        totalHours = nextShift.ScheduleHours
-                    } : null,
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var staffName = $"{staff.FirstName} {staff.LastName}";
+                var rosterStatus = MessageFormatterService.FormatRosterStatus(
+                    staffId, staffName, hasRosterToday, nextShift);
+
+                return Ok(rosterStatus);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = $"Error retrieving roster status: {ex.Message}",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var systemErrorResponse = MessageFormatterService.FormatSystemError(
+                    $"Error retrieving roster status: {ex.Message}",
+                    "Please verify the staff ID and try again.");
+
+                return StatusCode(500, systemErrorResponse);
             }
         }
 
@@ -353,24 +353,22 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
                     });
                 }
 
-                return Ok(new
-                {
-                    isValid = validationResult.IsValid,
-                    message = validationResult.Message,
-                    validationCode = validationResult.ValidationCode,
-                    rosterInfo = validationResult.RosterInfo,
-                    action = action,
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var validationResponse = MessageFormatterService.FormatValidationResult(
+                    validationResult.IsValid,
+                    validationResult.Message,
+                    validationResult.ValidationCode,
+                    action,
+                    validationResult.RosterInfo);
+
+                return Ok(validationResponse);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = $"Validation error: {ex.Message}",
-                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                var systemErrorResponse = MessageFormatterService.FormatSystemError(
+                    $"Validation error: {ex.Message}",
+                    "Please check your request format and try again.");
+
+                return StatusCode(500, systemErrorResponse);
             }
         }
 
