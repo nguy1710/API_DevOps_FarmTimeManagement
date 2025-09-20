@@ -120,6 +120,30 @@ public class CurrentStaffMiddleware : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
+        // =================================================================
+        // Bug Fix: Logout User Role Change Security Vulnerability
+        // Developer: Tim
+        // Date: 2025-09-21
+        // Description: Add token validation in authentication middleware
+        // Issue: Role change doesn't logout user immediately
+        // =================================================================
+
+        // START: Token Validation Check
+        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+        {
+            var token = authHeader.Substring("Bearer ".Length).Trim();
+
+            // Check if token has been invalidated due to role change
+            if (!RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom.TokenService.IsTokenValid(token))
+            {
+                context.Response.StatusCode = 401;
+                await context.Response.WriteAsync("Session expired due to role change. Please login again.");
+                return;
+            }
+        }
+        // END: Token Validation Check
+
         // Nếu đã auth (có Principal & có claim StaffId)
         var user = context.User;
         if (user?.Identity?.IsAuthenticated == true)
@@ -129,7 +153,7 @@ public class CurrentStaffMiddleware : IMiddleware
             {
                 try
                 {
-                    // Dùng service sẵn có để lấy staff (service của bạn trả về Staff, đã null Password) 
+                    // Dùng service sẵn có để lấy staff (service của bạn trả về Staff, đã null Password)
                     var staff = await RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom.StaffsServices.GetStaffById(staffId);
                     context.Items["Staff"] = staff; // <-- Lưu vào Items
                 }

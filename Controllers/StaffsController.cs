@@ -124,21 +124,57 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] object body)
         {
+            // =================================================================
+            // Bug Fix: Logout User Role Change Security Vulnerability
+            // Developer: Tim
+            // Date: 2025-09-21
+            // Location: Update method in StaffsController
+            // Description: Invalidate user token when role is changed
+            // Issue: Admin users still have access after role change to Worker
+            // =================================================================
 
- 
+            // START: Role Change Security Fix
+            // Get original staff data to compare roles
+            Staff originalStaff = await StaffsServices.GetStaffById(id);
+
             Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString());
-
             Staff staff_updated = await StaffsServices.UpdateStaff(id, staff,HttpContext);
-
-
 
             if (staff_updated.StaffId == -1)
             {
                 return Unauthorized(new { message = staff_updated.Email });
             }
 
+            // Check if role was changed - SECURITY CRITICAL
+            if (originalStaff != null && originalStaff.Role != staff_updated.Role)
+            {
+                // Role change detected - invalidate user's current session
 
+                // Get current user's token from request header
+                var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                {
+                    var currentToken = authHeader.Substring("Bearer ".Length).Trim();
 
+                    // Check if the role change affects the current user
+                    var currentStaffId = TokenService.GetStaffIdFromToken(currentToken);
+
+                    if (currentStaffId == id)
+                    {
+                        // Current user's role was changed - invalidate their token
+                        TokenService.InvalidateToken(currentToken);
+
+                        return Ok(new {
+                            message = "Role updated. You have been logged out due to role change.",
+                            roleChanged = true,
+                            requireRelogin = true,
+                            staff = staff_updated
+                        });
+                    }
+                }
+
+            }
+            // END: Role Change Security Fix
 
             return new OkObjectResult(JsonConvert.SerializeObject(staff_updated));
         }
