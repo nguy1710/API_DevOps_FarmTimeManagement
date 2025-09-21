@@ -98,7 +98,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         // POST: api/staffs
         // Body: JSON object của Staff (password có thể null; service sẽ INSERT và trả JSON bản ghi mới)
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] object body)
+        public async Task<IActionResult> Create([FromBody] Staff staff)
         {
             // =================================================================
             // Bug Fix: Phone Number Validation
@@ -107,8 +107,6 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
             // Description: Validate phone number format in API layer
             // Issue: Prevent invalid phone numbers from being stored
             // =================================================================
-
-            Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString());
 
             // Phone number validation
             if (!string.IsNullOrEmpty(staff.Phone) && !IsValidPhoneNumber(staff.Phone))
@@ -131,7 +129,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         // PUT: api/staffs/5
         // Body: JSON object của Staff (các trường sẽ được cập nhật đúng theo service)
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] object body)
+        public async Task<IActionResult> Update(int id, [FromBody] Staff staff)
         {
             // =================================================================
             // Bug Fix: Phone Number Validation
@@ -140,8 +138,6 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
             // Description: Validate phone number format in API layer
             // Issue: Prevent invalid phone numbers from being stored
             // =================================================================
-
-            Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString());
 
             // Phone number validation
             if (!string.IsNullOrEmpty(staff.Phone) && !IsValidPhoneNumber(staff.Phone))
