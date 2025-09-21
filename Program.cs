@@ -55,8 +55,8 @@ namespace RestfulAPI_FarmTimeManagement
                     Description = "Provide token follow: Bearer {token}"
                 };
                 c.AddSecurityDefinition("Bearer", scheme);
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement{
-        { scheme, new List<string>() } });
+                // c.AddSecurityRequirement(new OpenApiSecurityRequirement{
+                //     { scheme, new List<string>() } }); // Temporarily disabled for Bug #1 testing
 
 
             });

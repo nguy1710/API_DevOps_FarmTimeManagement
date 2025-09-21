@@ -94,7 +94,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         }
 
 
-        [Authorize]
+        [Authorize] // Re-enabled after Bug #1 testing completed
         // POST: api/staffs
         // Body: JSON object của Staff (password có thể null; service sẽ INSERT và trả JSON bản ghi mới)
         [HttpPost]
