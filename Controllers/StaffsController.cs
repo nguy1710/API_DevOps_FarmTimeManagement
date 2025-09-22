@@ -94,25 +94,32 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         }
 
 
-        [Authorize]
+        [Authorize] // Re-enabled after Bug #1 testing completed
         // POST: api/staffs
         // Body: JSON object của Staff (password có thể null; service sẽ INSERT và trả JSON bản ghi mới)
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] object body)
+        public async Task<IActionResult> Create([FromBody] Staff staff)
         {
- 
-            Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString()); 
+            // =================================================================
+            // Bug Fix: Phone Number Validation
+            // Developer: Tim
+            // Date: 2025-09-21
+            // Description: Validate phone number format in API layer
+            // Issue: Prevent invalid phone numbers from being stored
+            // =================================================================
+
+            // Phone number validation
+            if (!string.IsNullOrEmpty(staff.Phone) && !IsValidPhoneNumber(staff.Phone))
+            {
+                return BadRequest(new { message = "Invalid phone number format. Use 8-15 digits with optional + prefix." });
+            }
 
             Staff staff_created = await StaffsServices.CreateStaff(staff,HttpContext);
-
-
 
             if (staff_created.StaffId == -1)
             {
                 return Unauthorized(new { message = staff_created.Email });
             }
-
-
 
             return new OkObjectResult(JsonConvert.SerializeObject(staff_created));
 
@@ -122,23 +129,28 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
         // PUT: api/staffs/5
         // Body: JSON object của Staff (các trường sẽ được cập nhật đúng theo service)
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] object body)
+        public async Task<IActionResult> Update(int id, [FromBody] Staff staff)
         {
+            // =================================================================
+            // Bug Fix: Phone Number Validation
+            // Developer: Tim
+            // Date: 2025-09-21
+            // Description: Validate phone number format in API layer
+            // Issue: Prevent invalid phone numbers from being stored
+            // =================================================================
 
- 
-            Staff staff = JsonConvert.DeserializeObject<Staff>(body.ToString());
+            // Phone number validation
+            if (!string.IsNullOrEmpty(staff.Phone) && !IsValidPhoneNumber(staff.Phone))
+            {
+                return BadRequest(new { message = "Invalid phone number format. Use 8-15 digits with optional + prefix." });
+            }
 
             Staff staff_updated = await StaffsServices.UpdateStaff(id, staff,HttpContext);
-
-
 
             if (staff_updated.StaffId == -1)
             {
                 return Unauthorized(new { message = staff_updated.Email });
             }
-
-
-
 
             return new OkObjectResult(JsonConvert.SerializeObject(staff_updated));
         }
@@ -169,6 +181,15 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
 
 
 
+
+        // =================================================================
+        // Helper method for phone number validation
+        // Bug Fix: Phone Number Validation
+        // =================================================================
+        private bool IsValidPhoneNumber(string phone)
+        {
+            return System.Text.RegularExpressions.Regex.IsMatch(phone, @"^[\+]?[0-9]{8,15}$");
+        }
 
     }
 }
