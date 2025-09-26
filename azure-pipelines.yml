@@ -2,34 +2,29 @@ trigger:
   - main
 
 pool:
-  vmImage: 'windows-latest'   # Microsoft-hosted (Windows để dùng msdeploy/zip deploy)
+  vmImage: 'windows-latest'   # Bắt buộc Windows nếu dùng MSDeploy/PublishProfile
 
 variables:
   buildConfiguration: 'Release'
-  publishDir: '$(Build.ArtifactStagingDirectory)/webapp'
-  packagePath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+  packagePath: '$(Build.ArtifactStagingDirectory)/WebApp.zip'   # MSDeploy package output
   webAppName: 'flindersdevops'
 
 steps:
+  # 1) .NET 8 SDK (để restore NuGet, build SDK-style)
   - task: UseDotNet@2
     displayName: 'Use .NET 8 SDK'
     inputs:
       packageType: 'sdk'
       version: '8.x'
 
+  # 2) Restore
   - task: DotNetCoreCLI@2
     displayName: 'Restore'
     inputs:
       command: 'restore'
       projects: '**/*.sln'
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Build'
-    inputs:
-      command: 'build'
-      projects: '**/*.sln'
-      arguments: '--configuration $(buildConfiguration)'
-
+  # 3) (Tùy chọn) Test
   - task: DotNetCoreCLI@2
     displayName: 'Test'
     inputs:
@@ -38,47 +33,44 @@ steps:
       arguments: '--configuration $(buildConfiguration)'
     condition: succeededOrFailed()
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Publish'
+  # 4) Đóng gói MSDeploy package bằng MSBuild
+  #    => TẠO RA file WebApp.zip theo định dạng Web Deploy (khác zip thường)
+  - task: MSBuild@1
+    displayName: 'Package Web Deploy (MSDeploy)'
     inputs:
-      command: 'publish'
-      publishWebProjects: true
-      arguments: '--configuration $(buildConfiguration) --output $(publishDir)'
-      zipAfterPublish: false
+      solution: '**/*.csproj'                # Nếu có nhiều csproj, nên chỉ định đúng Web API csproj
+      msbuildArchitecture: 'x64'
+      configuration: '$(buildConfiguration)'
+      msbuildArguments: >
+        /p:DeployOnBuild=true
+        /p:WebPublishMethod=Package
+        /p:PackageAsSingleFile=true
+        /p:SkipInvalidConfigurations=true
+        /p:PackageLocation="$(packagePath)"
 
-  - task: ArchiveFiles@2
-    displayName: 'Zip published app'
-    inputs:
-      rootFolderOrFile: '$(publishDir)'
-      includeRootFolder: false
-      archiveType: 'zip'
-      archiveFile: '$(packagePath)'
-      replaceExistingArchive: true
-
-  # Tải publish profile (đã upload ở Library > Secure files)
+  # 5) Tải publish profile (đã upload ở Library > Secure files)
   - task: DownloadSecureFile@1
     name: fetchProfile
     displayName: 'Download publish profile'
     inputs:
-      secureFile: 'flindersdevops.PublishSettings'   # đúng tên file bạn đã upload
+      secureFile: 'flindersdevops.PublishSettings'   # Đúng tên file bạn đã upload
 
-  # Trích password (userPWD) từ file .PublishSettings và lưu vào biến bí mật
+  # 6) Trích password (userPWD) từ .PublishSettings -> lưu vào biến bí mật
   - powershell: |
       [xml]$xml = Get-Content '$(fetchProfile.secureFilePath)'
-      # Nhiều khi có nhiều <publishProfile>, lấy cái đầu tiên
       $pwd = $xml.publishData.publishProfile[0].userPWD
       if ([string]::IsNullOrWhiteSpace($pwd)) {
-        throw "Không tìm thấy userPWD trong publish profile. Hãy kiểm tra đã bật Basic Auth và tải profile mới."
+        throw "Không tìm thấy userPWD trong publish profile. Hãy bật Basic Auth và tải profile mới từ Portal."
       }
       Write-Host "##vso[task.setvariable variable=publishProfilePassword;issecret=true]$pwd"
     displayName: 'Extract publish profile password'
 
-  # Deploy bằng Publish Profile (v5 yêu cầu cả Path + Password)
+  # 7) Deploy bằng Publish Profile (MSDeploy)
   - task: AzureRmWebAppDeployment@5
-    displayName: 'Deploy to Azure Web App (Publish Profile)'
+    displayName: 'Deploy to Azure Web App (Publish Profile + MSDeploy)'
     inputs:
       ConnectionType: 'PublishProfile'
       PublishProfilePath: '$(fetchProfile.secureFilePath)'
       PublishProfilePassword: '$(publishProfilePassword)'
-      Package: '$(packagePath)'
-      #DeploymentType: 'zipDeploy'   # có thể bật nếu muốn ép Zip Deploy
+      Package: '$(packagePath)'              # PHẢI là MSDeploy package .zip ở bước 4
+      # DeploymentType: 'webDeploy'          # Mặc định là webDeploy khi dùng PublishProfile
