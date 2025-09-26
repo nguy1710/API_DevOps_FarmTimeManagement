@@ -2,13 +2,11 @@ trigger:
   - main
 
 pool:
-  vmImage: 'windows-latest'   # cần Windows cho MSDeploy/PublishProfile
+  vmImage: 'windows-latest'   # cần Windows cho MSDeploy
 
 variables:
   buildConfiguration: 'Release'
-  # ĐƯỜNG DẪN TỚI WEB API CSPROJ CHÍNH — NHỚ SỬA CHO ĐÚNG!
-  projectPath: '**/*.csproj'
-  # File MSDeploy package output (khác zip thường)
+  projectPath: '**/*.csproj'                          # SỬA: trỏ đúng Web API .csproj
   packagePath: '$(Build.ArtifactStagingDirectory)/WebApp.zip'
 
 steps:
@@ -26,11 +24,11 @@ steps:
       command: 'restore'
       projects: '$(projectPath)'
 
-  # 3) ĐÓNG GÓI MSDEPLOY PACKAGE (bắt buộc khi dùng Publish Profile)
+  # 3) Đóng gói MSDeploy package (bắt buộc khi dùng Publish Profile)
   - task: MSBuild@1
     displayName: 'Package Web Deploy (MSDeploy)'
     inputs:
-      solution: '$(projectPath)'          # nên trỏ đúng tới Web API .csproj chính
+      solution: '$(projectPath)'          # Nên chỉ định đúng csproj Web API
       msbuildArchitecture: 'x64'
       configuration: '$(buildConfiguration)'
       msbuildArguments: >
@@ -40,28 +38,46 @@ steps:
         /p:SkipInvalidConfigurations=true
         /p:PackageLocation="$(packagePath)"
 
-  # 4) Tải publish profile đã upload trong Library > Secure files
+  # 4) Tải publish profile từ Secure files
   - task: DownloadSecureFile@1
     name: fetchProfile
     displayName: 'Download publish profile'
     inputs:
-      secureFile: 'flindersdevops.PublishSettings'   # đúng tên file bạn đã upload
+      secureFile: 'flindersdevops.PublishSettings'   # đúng tên đã upload
 
-  # 5) Trích password (userPWD) từ PublishSettings -> lưu vào biến bí mật
+  # 5) TẠO FILE PUBLISH PROFILE CHỈ CHỨA MSDEPLOY + LẤY PASSWORD
   - powershell: |
       [xml]$xml = Get-Content '$(fetchProfile.secureFilePath)'
-      $pwd = $xml.publishData.publishProfile[0].userPWD
-      if ([string]::IsNullOrWhiteSpace($pwd)) {
-        throw "Không tìm thấy userPWD trong publish profile. Hãy bật Basic Auth và tải profile mới."
-      }
+
+      # Tìm profile có publishMethod="MSDeploy"
+      $ms = $xml.publishData.publishProfile | Where-Object { $_.publishMethod -eq 'MSDeploy' } | Select-Object -First 1
+      if (-not $ms) { throw "Không tìm thấy publishProfile có publishMethod='MSDeploy' trong .PublishSettings." }
+
+      # Lưu password vào biến bí mật
+      $pwd = $ms.userPWD
+      if ([string]::IsNullOrWhiteSpace($pwd)) { throw "MSDeploy profile không có userPWD. Hãy bật Basic Auth và tải lại profile." }
       Write-Host "##vso[task.setvariable variable=publishProfilePassword;issecret=true]$pwd"
-    displayName: 'Extract publish profile password'
+
+      # Xuất ra file PublishSettings chỉ chứa đúng MSDeploy profile
+      $new = New-Object System.Xml.XmlDocument
+      $decl = $new.CreateXmlDeclaration("1.0","utf-8",$null)
+      $new.AppendChild($decl) | Out-Null
+      $root = $new.CreateElement("publishData")
+      $new.AppendChild($root) | Out-Null
+      $imported = $new.ImportNode($ms, $true)
+      $root.AppendChild($imported) | Out-Null
+
+      $outPath = "$(Build.SourcesDirectory)\msdeploy.PublishSettings"
+      $new.Save($outPath)
+      Write-Host "##vso[task.setvariable variable=msdeployProfilePath]$outPath"
+    displayName: 'Filter MSDeploy profile & extract password'
 
   # 6) Deploy bằng Publish Profile (webDeploy)
   - task: AzureRmWebAppDeployment@5
-    displayName: 'Deploy to Azure App Service (Publish Profile)'
+    displayName: 'Deploy to Azure App Service (Publish Profile + MSDeploy)'
     inputs:
       ConnectionType: 'PublishProfile'
-      PublishProfilePath: '$(fetchProfile.secureFilePath)'
+      PublishProfilePath: '$(msdeployProfilePath)'
       PublishProfilePassword: '$(publishProfilePassword)'
       Package: '$(packagePath)'
+      # webDeploy là mặc định khi ConnectionType=PublishProfile
