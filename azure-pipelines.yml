@@ -2,7 +2,7 @@ trigger:
   - main
 
 pool:
-  vmImage: 'windows-latest'   # Microsoft-hosted agent
+  vmImage: 'windows-latest'   # Microsoft-hosted agent (Windows cần cho PublishProfile deploy)
 
 variables:
   buildConfiguration: 'Release'
@@ -11,7 +11,7 @@ variables:
   webAppName: 'flindersdevops'        # Tên App Service (Windows)
 
 steps:
-  # 1) .NET 8 SDK
+  # 1) Cài .NET 8 SDK
   - task: UseDotNet@2
     displayName: 'Use .NET 8 SDK'
     inputs:
@@ -33,7 +33,7 @@ steps:
       projects: '**/*.sln'
       arguments: '--configuration $(buildConfiguration)'
 
-  # 4) (Tùy chọn) Test — không chặn deploy nếu chưa có test
+  # 4) (Tùy chọn) Test
   - task: DotNetCoreCLI@2
     displayName: 'Test'
     inputs:
@@ -61,21 +61,18 @@ steps:
       archiveFile: '$(packagePath)'
       replaceExistingArchive: true
 
-  # 7) Tải Secure File (Publish Profile) để dùng trong task deploy
+  # 7) Download publish profile (secure file)
   - task: DownloadSecureFile@1
     name: fetchProfile
     displayName: 'Download publish profile'
     inputs:
       secureFile: 'flindersdevops.PublishSettings'   # đúng tên file bạn đã upload
 
-  # 8) Deploy lên App Service (Windows) bằng Publish Profile
-  - task: AzureWebApp@1
+  # 8) Deploy bằng Publish Profile
+  - task: AzureRmWebAppDeployment@5
     displayName: 'Deploy to Azure Web App (Publish Profile)'
     inputs:
-      appType: 'webApp'
-      appName: '$(webAppName)'
-      package: '$(packagePath)'
-      publishProfile: '$(fetchProfile.secureFilePath)'
-      # Nếu cần "App Offline" trong lúc deploy, dùng thêm:
-      # enableCustomDeployment: true
-      # deploymentMethod: 'zipDeploy'
+      ConnectionType: 'PublishProfile'
+      PublishProfilePath: '$(fetchProfile.secureFilePath)'
+      Package: '$(packagePath)'
+      #DeploymentType: 'zipDeploy'   # có thể bật thêm nếu muốn ép kiểu zipDeploy
