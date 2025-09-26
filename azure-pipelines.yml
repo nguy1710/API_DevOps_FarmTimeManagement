@@ -2,30 +2,27 @@ trigger:
   - main
 
 pool:
-  vmImage: 'windows-latest'   # Microsoft-hosted agent (Windows cần cho PublishProfile deploy)
+  vmImage: 'windows-latest'   # Microsoft-hosted (Windows để dùng msdeploy/zip deploy)
 
 variables:
   buildConfiguration: 'Release'
   publishDir: '$(Build.ArtifactStagingDirectory)/webapp'
   packagePath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-  webAppName: 'flindersdevops'        # Tên App Service (Windows)
+  webAppName: 'flindersdevops'
 
 steps:
-  # 1) Cài .NET 8 SDK
   - task: UseDotNet@2
     displayName: 'Use .NET 8 SDK'
     inputs:
       packageType: 'sdk'
       version: '8.x'
 
-  # 2) Restore
   - task: DotNetCoreCLI@2
     displayName: 'Restore'
     inputs:
       command: 'restore'
       projects: '**/*.sln'
 
-  # 3) Build
   - task: DotNetCoreCLI@2
     displayName: 'Build'
     inputs:
@@ -33,7 +30,6 @@ steps:
       projects: '**/*.sln'
       arguments: '--configuration $(buildConfiguration)'
 
-  # 4) (Tùy chọn) Test
   - task: DotNetCoreCLI@2
     displayName: 'Test'
     inputs:
@@ -42,7 +38,6 @@ steps:
       arguments: '--configuration $(buildConfiguration)'
     condition: succeededOrFailed()
 
-  # 5) Publish (xuất thư mục)
   - task: DotNetCoreCLI@2
     displayName: 'Publish'
     inputs:
@@ -51,7 +46,6 @@ steps:
       arguments: '--configuration $(buildConfiguration) --output $(publishDir)'
       zipAfterPublish: false
 
-  # 6) Zip gói publish
   - task: ArchiveFiles@2
     displayName: 'Zip published app'
     inputs:
@@ -61,18 +55,30 @@ steps:
       archiveFile: '$(packagePath)'
       replaceExistingArchive: true
 
-  # 7) Download publish profile (secure file)
+  # Tải publish profile (đã upload ở Library > Secure files)
   - task: DownloadSecureFile@1
     name: fetchProfile
     displayName: 'Download publish profile'
     inputs:
       secureFile: 'flindersdevops.PublishSettings'   # đúng tên file bạn đã upload
 
-  # 8) Deploy bằng Publish Profile
+  # Trích password (userPWD) từ file .PublishSettings và lưu vào biến bí mật
+  - powershell: |
+      [xml]$xml = Get-Content '$(fetchProfile.secureFilePath)'
+      # Nhiều khi có nhiều <publishProfile>, lấy cái đầu tiên
+      $pwd = $xml.publishData.publishProfile[0].userPWD
+      if ([string]::IsNullOrWhiteSpace($pwd)) {
+        throw "Không tìm thấy userPWD trong publish profile. Hãy kiểm tra đã bật Basic Auth và tải profile mới."
+      }
+      Write-Host "##vso[task.setvariable variable=publishProfilePassword;issecret=true]$pwd"
+    displayName: 'Extract publish profile password'
+
+  # Deploy bằng Publish Profile (v5 yêu cầu cả Path + Password)
   - task: AzureRmWebAppDeployment@5
     displayName: 'Deploy to Azure Web App (Publish Profile)'
     inputs:
       ConnectionType: 'PublishProfile'
       PublishProfilePath: '$(fetchProfile.secureFilePath)'
+      PublishProfilePassword: '$(publishProfilePassword)'
       Package: '$(packagePath)'
-      #DeploymentType: 'zipDeploy'   # có thể bật thêm nếu muốn ép kiểu zipDeploy
+      #DeploymentType: 'zipDeploy'   # có thể bật nếu muốn ép Zip Deploy
