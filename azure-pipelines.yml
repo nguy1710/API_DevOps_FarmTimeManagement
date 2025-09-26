@@ -1,19 +1,81 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+  - main
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'windows-latest'   # Microsoft-hosted agent
+
+variables:
+  buildConfiguration: 'Release'
+  publishDir: '$(Build.ArtifactStagingDirectory)/webapp'
+  packagePath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+  webAppName: 'flindersdevops'        # Tên App Service (Windows)
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+  # 1) .NET 8 SDK
+  - task: UseDotNet@2
+    displayName: 'Use .NET 8 SDK'
+    inputs:
+      packageType: 'sdk'
+      version: '8.x'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  # 2) Restore
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore'
+    inputs:
+      command: 'restore'
+      projects: '**/*.sln'
+
+  # 3) Build
+  - task: DotNetCoreCLI@2
+    displayName: 'Build'
+    inputs:
+      command: 'build'
+      projects: '**/*.sln'
+      arguments: '--configuration $(buildConfiguration)'
+
+  # 4) (Tùy chọn) Test — không chặn deploy nếu chưa có test
+  - task: DotNetCoreCLI@2
+    displayName: 'Test'
+    inputs:
+      command: 'test'
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration $(buildConfiguration)'
+    condition: succeededOrFailed()
+
+  # 5) Publish (xuất thư mục)
+  - task: DotNetCoreCLI@2
+    displayName: 'Publish'
+    inputs:
+      command: 'publish'
+      publishWebProjects: true
+      arguments: '--configuration $(buildConfiguration) --output $(publishDir)'
+      zipAfterPublish: false
+
+  # 6) Zip gói publish
+  - task: ArchiveFiles@2
+    displayName: 'Zip published app'
+    inputs:
+      rootFolderOrFile: '$(publishDir)'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(packagePath)'
+      replaceExistingArchive: true
+
+  # 7) Tải Secure File (Publish Profile) để dùng trong task deploy
+  - task: DownloadSecureFile@1
+    name: fetchProfile
+    displayName: 'Download publish profile'
+    inputs:
+      secureFile: 'flindersdevops.PublishSettings'   # đúng tên file bạn đã upload
+
+  # 8) Deploy lên App Service (Windows) bằng Publish Profile
+  - task: AzureWebApp@1
+    displayName: 'Deploy to Azure Web App (Publish Profile)'
+    inputs:
+      appType: 'webApp'
+      appName: '$(webAppName)'
+      package: '$(packagePath)'
+      publishProfile: '$(fetchProfile.secureFilePath)'
+      # Nếu cần "App Offline" trong lúc deploy, dùng thêm:
+      # enableCustomDeployment: true
+      # deploymentMethod: 'zipDeploy'
