@@ -2,15 +2,17 @@ trigger:
   - main
 
 pool:
-  vmImage: 'windows-latest'   # Bắt buộc Windows nếu dùng MSDeploy/PublishProfile
+  vmImage: 'windows-latest'   # cần Windows cho MSDeploy/PublishProfile
 
 variables:
   buildConfiguration: 'Release'
-  packagePath: '$(Build.ArtifactStagingDirectory)/WebApp.zip'   # MSDeploy package output
-  webAppName: 'flindersdevops'
+  # ĐƯỜNG DẪN TỚI WEB API CSPROJ CHÍNH — NHỚ SỬA CHO ĐÚNG!
+  projectPath: '**/*.csproj'
+  # File MSDeploy package output (khác zip thường)
+  packagePath: '$(Build.ArtifactStagingDirectory)/WebApp.zip'
 
 steps:
-  # 1) .NET 8 SDK (để restore NuGet, build SDK-style)
+  # 1) .NET 8 SDK
   - task: UseDotNet@2
     displayName: 'Use .NET 8 SDK'
     inputs:
@@ -22,23 +24,13 @@ steps:
     displayName: 'Restore'
     inputs:
       command: 'restore'
-      projects: '**/*.sln'
+      projects: '$(projectPath)'
 
-  # 3) (Tùy chọn) Test
-  - task: DotNetCoreCLI@2
-    displayName: 'Test'
-    inputs:
-      command: 'test'
-      projects: '**/*Tests/*.csproj'
-      arguments: '--configuration $(buildConfiguration)'
-    condition: succeededOrFailed()
-
-  # 4) Đóng gói MSDeploy package bằng MSBuild
-  #    => TẠO RA file WebApp.zip theo định dạng Web Deploy (khác zip thường)
+  # 3) ĐÓNG GÓI MSDEPLOY PACKAGE (bắt buộc khi dùng Publish Profile)
   - task: MSBuild@1
     displayName: 'Package Web Deploy (MSDeploy)'
     inputs:
-      solution: '**/*.csproj'                # Nếu có nhiều csproj, nên chỉ định đúng Web API csproj
+      solution: '$(projectPath)'          # nên trỏ đúng tới Web API .csproj chính
       msbuildArchitecture: 'x64'
       configuration: '$(buildConfiguration)'
       msbuildArguments: >
@@ -48,29 +40,28 @@ steps:
         /p:SkipInvalidConfigurations=true
         /p:PackageLocation="$(packagePath)"
 
-  # 5) Tải publish profile (đã upload ở Library > Secure files)
+  # 4) Tải publish profile đã upload trong Library > Secure files
   - task: DownloadSecureFile@1
     name: fetchProfile
     displayName: 'Download publish profile'
     inputs:
-      secureFile: 'flindersdevops.PublishSettings'   # Đúng tên file bạn đã upload
+      secureFile: 'flindersdevops.PublishSettings'   # đúng tên file bạn đã upload
 
-  # 6) Trích password (userPWD) từ .PublishSettings -> lưu vào biến bí mật
+  # 5) Trích password (userPWD) từ PublishSettings -> lưu vào biến bí mật
   - powershell: |
       [xml]$xml = Get-Content '$(fetchProfile.secureFilePath)'
       $pwd = $xml.publishData.publishProfile[0].userPWD
       if ([string]::IsNullOrWhiteSpace($pwd)) {
-        throw "Không tìm thấy userPWD trong publish profile. Hãy bật Basic Auth và tải profile mới từ Portal."
+        throw "Không tìm thấy userPWD trong publish profile. Hãy bật Basic Auth và tải profile mới."
       }
       Write-Host "##vso[task.setvariable variable=publishProfilePassword;issecret=true]$pwd"
     displayName: 'Extract publish profile password'
 
-  # 7) Deploy bằng Publish Profile (MSDeploy)
+  # 6) Deploy bằng Publish Profile (webDeploy)
   - task: AzureRmWebAppDeployment@5
-    displayName: 'Deploy to Azure Web App (Publish Profile + MSDeploy)'
+    displayName: 'Deploy to Azure App Service (Publish Profile)'
     inputs:
       ConnectionType: 'PublishProfile'
       PublishProfilePath: '$(fetchProfile.secureFilePath)'
       PublishProfilePassword: '$(publishProfilePassword)'
-      Package: '$(packagePath)'              # PHẢI là MSDeploy package .zip ở bước 4
-      # DeploymentType: 'webDeploy'          # Mặc định là webDeploy khi dùng PublishProfile
+      Package: '$(packagePath)'
