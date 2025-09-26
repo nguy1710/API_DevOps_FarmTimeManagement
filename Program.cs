@@ -38,7 +38,7 @@ namespace RestfulAPI_FarmTimeManagement
                 {
                     Title = "API document for Farm Time Management",
                     Version = "V1",
-                    Description = "Sprint-2"
+                    Description = "Sprint-2.2 Tom"
                      
                 });
 
