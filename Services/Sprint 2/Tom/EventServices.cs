@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using RestfulAPI_FarmTimeManagement.DataConnects;
 using RestfulAPI_FarmTimeManagement.Models;
 using RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom;
+using System.Collections.Generic;
+using System.Reflection.Metadata.Ecma335;
 
 namespace RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tom
 {
@@ -151,6 +153,8 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tom
 
         }
 
+
+
         public static async Task<Event?> DeleteEvent(int id, HttpContext httpContext)
         {
             var connects = new EventConnects();
@@ -184,5 +188,137 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tom
 
 
         }
+
+
+
+
+        public static async Task<List<ResultRoster>> ReportLock_in_LockOUT(DateTime date)
+        {
+            var workScheduleConnects = new WorkScheduleConnects();
+            var eventConnects = new EventConnects();
+
+            // Xác định khung ngày [00:00, 24:00) của ngày được truyền vào
+            var dayStart = date.Date;
+            var dayEnd = dayStart.AddDays(1);
+
+            // 1) Lấy tất cả WorkSchedule có StartTime nằm TRONG ngày
+            var schedules = await workScheduleConnects.QueryWorkSchedule($@"
+        SELECT * FROM WorkSchedule
+        WHERE StartTime >= '{dayStart:yyyy-MM-dd}'
+          AND StartTime <  '{dayEnd:yyyy-MM-dd}'
+        ORDER BY StaffId, StartTime
+    ");
+
+            var results = new List<ResultRoster>();
+
+            foreach (var ws in schedules)
+            {
+                // 2) Lấy tất cả event của staff trong khoảng lịch
+                var events = await eventConnects.QueryEvent($@"
+            SELECT * FROM [Event]
+            WHERE StaffId = {ws.StaffId}
+              AND [Timestamp] >= '{ws.StartTime:O}'
+              AND [Timestamp] <= '{ws.EndTime:O}'
+            ORDER BY [Timestamp]
+        ");
+
+                // Tách clock-in / clock-out trong khung lịch
+                var clockIn = events
+                    .Where(e => e.EventType == "Clock in")
+                    .OrderBy(e => e.Timestamp)
+                    .Select(e => (DateTime?)e.Timestamp)
+                    .FirstOrDefault();
+
+                var clockOut = events
+                    .Where(e => e.EventType == "Clock out")
+                    .OrderByDescending(e => e.Timestamp)
+                    .Select(e => (DateTime?)e.Timestamp)
+                    .FirstOrDefault();
+
+                // 3) Tính status
+                var statusParts = new List<string>();
+
+                if (clockIn.HasValue)
+                {
+                    if (clockIn.Value - ws.StartTime > TimeSpan.FromMinutes(10))
+                        statusParts.Add("clock in late");
+                }
+                else
+                {
+                    statusParts.Add("missing clock in");
+                }
+
+                if (clockOut.HasValue)
+                {
+                    if (ws.EndTime - clockOut.Value > TimeSpan.FromMinutes(10))
+                        statusParts.Add("clock out early");
+                }
+                else
+                {
+                    statusParts.Add("missing clock out");
+                }
+
+                var status = string.Join(", ", statusParts);
+
+                // 4) actual_hour = (clock_out - clock_in) làm tròn 15'
+                double actualHours = 0.0;
+                DateTime clockInVal = clockIn ?? ws.StartTime;   // fallback để điền cấu trúc
+                DateTime clockOutVal = clockOut ?? ws.EndTime;    // fallback để điền cấu trúc
+
+                if (clockIn.HasValue && clockOut.HasValue && clockOut > clockIn)
+                {
+                    var span = clockOut.Value - clockIn.Value;
+                    var rounded = RoundToQuarterHour(span); // làm tròn tới 0/15/30/45 phút
+                    actualHours = Math.Round(rounded.TotalMinutes / 60.0, 2, MidpointRounding.AwayFromZero);
+                    // Ví dụ: 7 giờ 15' -> 7.25
+                }
+
+                // 5) Lấy tên nhân viên
+                var staff = await StaffsServices.GetStaffById(ws.StaffId);
+                var fullName = $"{staff.FirstName} {staff.LastName}";
+
+                results.Add(new ResultRoster
+                {
+                    Staff_fullname = fullName,
+                    StartTime = ws.StartTime,
+                    EndTime = ws.EndTime,
+                    Clock_in = clockInVal,
+                    Clock_out = clockOutVal,
+                    actual_hour = actualHours,
+                    Status = status
+                });
+            }
+
+            return results;
+
+            // Helper: làm tròn TimeSpan tới bậc 15 phút
+            static TimeSpan RoundToQuarterHour(TimeSpan ts)
+            {
+                const int quarter = 15;
+                var totalMinutes = ts.TotalMinutes;
+                var roundedMinutes = Math.Round(totalMinutes / quarter) * quarter;
+                return TimeSpan.FromMinutes(roundedMinutes);
+            }
+        }
+
+
+
+
+
+
     }
+}
+
+public class ResultRoster { 
+
+    public string Staff_fullname { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; } 
+    public DateTime Clock_in { get; set; }
+    public DateTime Clock_out { get; set; }
+    public int ScheduleHours { get; set; }
+    public double actual_hour { get; set; }
+    public string Status { get; set; }
+
+
 }

@@ -34,7 +34,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
 
             if (staff_login.StaffId == -1)
             {
-                 return Unauthorized(new { message = staff_login.Email });
+                 return BadRequest(new { message = staff_login.Email });
             }
 
 
@@ -46,10 +46,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
                 staff = staff_login
             });
 
-
-            // return new OkObjectResult(JsonConvert.SerializeObject(staff_login)); 
-
-
+ 
 
 
         }
@@ -118,7 +115,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
 
             if (staff_created.StaffId == -1)
             {
-                return Unauthorized(new { message = staff_created.Email });
+                return BadRequest(new { message = staff_created.Email });
             }
 
             return new OkObjectResult(JsonConvert.SerializeObject(staff_created));
@@ -149,11 +146,40 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
 
             if (staff_updated.StaffId == -1)
             {
-                return Unauthorized(new { message = staff_updated.Email });
+                return BadRequest(new { message = staff_updated.Email });
             }
 
             return new OkObjectResult(JsonConvert.SerializeObject(staff_updated));
         }
+
+        [Authorize]
+        // PUT: api/staffs/5/changepassword
+        // Body: JSON object with newPassword field
+        [HttpPut("{id:int}/changepassword")]
+        public async Task<IActionResult> ChangePassword(int id, [FromBody] object body)
+        {
+            Dictionary<string, string> dic = JsonConvert.DeserializeObject<Dictionary<string, string>>(body.ToString());
+
+            string newPassword = dic.ContainsKey("password") ? dic["password"] : "";
+
+            if (string.IsNullOrEmpty(newPassword))
+            {
+                return BadRequest(new { message = "new password field is required" });
+            }
+
+            Staff staff_updated = await StaffsServices.ChangePasswordStaff(id, newPassword, HttpContext);
+
+            if (staff_updated.StaffId == -1)
+            {
+                return BadRequest(new { message = staff_updated.Email });
+            }
+
+            return new OkObjectResult(JsonConvert.SerializeObject(staff_updated));
+        }
+
+
+
+        
 
         [Authorize]
         // DELETE: api/staffs/5
@@ -167,7 +193,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers // Đổi "MyApi" thành nam
 
             if (staff_deleted.StaffId == -1)
             {
-                return Unauthorized(new { message = staff_deleted.Email });
+                return BadRequest(new { message = staff_deleted.Email });
             }
 
 

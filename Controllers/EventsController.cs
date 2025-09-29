@@ -14,6 +14,37 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
     [Route("api/[controller]")]
     public class EventsController : ControllerBase
     {
+
+
+
+
+
+
+        // GET: api/events/reportlock?date=2025-09-16
+        [HttpGet("reportlock")]
+        public async Task<IActionResult> GetReportLock([FromQuery] DateTime date)
+        {
+            try
+            {
+                var report = await EventServices.ReportLock_in_LockOUT(date);
+                return new OkObjectResult(JsonConvert.SerializeObject(report));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
         // GET: api/events
         [HttpGet]
         public async Task<IActionResult> GetAll()
