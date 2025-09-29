@@ -134,7 +134,8 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
             }
             else
             { 
-
+ 
+ 
                 staff.Password = hashPassword(staff.Password);
                 var result = await staffsService.CreateStaff(staff);
                  
@@ -170,7 +171,10 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                 return new Staff { StaffId = -1, Email = "Staff was not found" };
             }
 
-            staff.Password = hashPassword(staff.Password);
+            // Get current password using QuerryStaffs function 
+            staff.Password = existingStaff.Password;
+ 
+         
 
             var result = await staffConnects.UpdateStaff(id, staff);
             if (result != null)
@@ -178,7 +182,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                  
 
                 History result_hiscreated = await HistoryServices.
-                  CreateHistory("Update user", "Succeed", $"user {staff.FirstName} {staff.LastName} was updated.", httpContext);
+                CreateHistory("Update user", "Succeed", $"user {staff.FirstName} {staff.LastName} was updated.", httpContext);
                  
 
                 if (result_hiscreated != null)
@@ -214,6 +218,39 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                     return result;
 
                 } 
+            }
+
+            return new Staff { StaffId = -1, Email = "Failed due to system issue." };
+        }
+
+        public static async Task<Staff> ChangePasswordStaff(int id, string newpassword, HttpContext httpContext)
+        {
+            StaffConnects staffConnects = new StaffConnects();
+
+            var existingStaff = await GetStaffById(id);
+            if (existingStaff == null)
+            {
+                return new Staff { StaffId = -1, Email = "Staff was not found" };
+            }
+
+            // Hash the new password
+            string hashedNewPassword = hashPassword(newpassword);
+
+
+            existingStaff.Password = hashedNewPassword;
+
+ 
+
+            var result = await staffConnects.UpdateStaff(id, existingStaff);
+            if (result != null)
+            {
+                History result_hiscreated = await HistoryServices.
+                    CreateHistory("Change password", "Succeed", $"Password for user {existingStaff.FirstName} {existingStaff.LastName} was changed.", httpContext);
+
+                if (result_hiscreated != null)
+                {
+                    return result;
+                }
             }
 
             return new Staff { StaffId = -1, Email = "Failed due to system issue." };

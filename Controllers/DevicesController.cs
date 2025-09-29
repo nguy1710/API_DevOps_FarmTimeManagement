@@ -55,7 +55,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
             if (created.DeviceId == -1)
             {
-                return Unauthorized(new { message = created.Status });
+                return BadRequest(new { message = created.Status });
             }
 
 
@@ -75,7 +75,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
             if (updated.DeviceId == -1)
             {
-                return Unauthorized(new { message = updated.Status });
+                return BadRequest(new { message = updated.Status });
             }
  
 
@@ -94,7 +94,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
             if (deleted.DeviceId == -1)
             {
-                return Unauthorized(new { message = deleted.Status });
+                return BadRequest(new { message = deleted.Status });
             }
 
             return new OkObjectResult(JsonConvert.SerializeObject(deleted));

@@ -71,7 +71,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
             if (created.BiometricId == -1)
             {
-                return Unauthorized(new { message = created.Data });
+                return BadRequest(new { message = created.Data });
             }
 
             return new OkObjectResult(JsonConvert.SerializeObject(created));
@@ -88,7 +88,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
             if (updated.BiometricId == -1)
             {
-                return Unauthorized(new { message = updated.Data });
+                return BadRequest(new { message = updated.Data });
             }
 
             return new OkObjectResult(JsonConvert.SerializeObject(updated));
@@ -103,7 +103,7 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
             if (deleted.BiometricId == -1)
             {
-                return Unauthorized(new { message = deleted.Data });
+                return BadRequest(new { message = deleted.Data });
             }
 
             return new OkObjectResult(JsonConvert.SerializeObject(deleted));
