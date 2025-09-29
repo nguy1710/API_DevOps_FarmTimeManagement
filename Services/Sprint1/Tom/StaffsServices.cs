@@ -112,8 +112,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
             List<Staff> result = await staffsService.QueryStaff(querystring);
             if (result.Count == 1)
             {
-                Staff staff = result[0];
-                staff.Password = null; // do not return password
+                Staff staff = result[0]; 
                 return staff;
             }
             throw new Exception("Staff not found");
@@ -184,12 +183,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
                     return new Staff { StaffId = -1, Email = "This email was registered before" };
                 }
 
-            }
-
-
-
-
-
+            } 
 
 
 
