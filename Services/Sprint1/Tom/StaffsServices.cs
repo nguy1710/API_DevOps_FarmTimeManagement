@@ -163,6 +163,17 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
 
         public static async Task<Staff> UpdateStaff(int id, Staff staff,HttpContext httpContext)
         {
+
+
+            bool isStaffexsit = await is_Staff_exist(staff.Email);
+            if (isStaffexsit)
+            {
+                return new Staff { StaffId = -1, Email = "This email was registered before" };
+            }
+
+
+
+
             StaffConnects staffConnects = new StaffConnects();
  
             var existingStaff = await GetStaffById(id);
