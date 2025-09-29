@@ -163,15 +163,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
 
         public static async Task<Staff> UpdateStaff(int id, Staff staff,HttpContext httpContext)
         {
-
-
-            bool isStaffexsit = await is_Staff_exist(staff.Email);
-            if (isStaffexsit)
-            {
-                return new Staff { StaffId = -1, Email = "This email was registered before" };
-            }
-
-
+             
 
 
             StaffConnects staffConnects = new StaffConnects();
@@ -181,6 +173,25 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom
             {
                 return new Staff { StaffId = -1, Email = "Staff was not found" };
             }
+
+             
+
+            if (staff.Email.Equals(existingStaff.Email) == false)
+            {
+                bool isStaffexsit = await is_Staff_exist(staff.Email);
+                if (isStaffexsit)
+                {
+                    return new Staff { StaffId = -1, Email = "This email was registered before" };
+                }
+
+            }
+
+
+
+
+
+
+
 
             // Get current password using QuerryStaffs function 
             staff.Password = existingStaff.Password;
