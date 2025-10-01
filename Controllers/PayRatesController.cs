@@ -10,42 +10,6 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
     [Route("api/[controller]")]
     public class PayRatesController : ControllerBase
     {
-        [HttpGet("staff")]
-        public async Task<IActionResult> GetAllStaffWithPayRates()
-        {
-            List<Staff> staff = await PayRateServices.GetAllStaffWithPayRates();
-            return new OkObjectResult(JsonConvert.SerializeObject(staff));
-        }
-
-        [HttpGet("staff/{role}/{contractType}")]
-        public async Task<IActionResult> GetStaffByRoleAndContract(string role, string contractType)
-        {
-            List<Staff> staff = await PayRateServices.GetStaffByRoleAndContract(role, contractType);
-            return new OkObjectResult(JsonConvert.SerializeObject(staff));
-        }
-
-        [HttpGet("staff/{id:int}")]
-        public async Task<IActionResult> GetStaffById(int id)
-        {
-            Staff? staff = await PayRateServices.GetStaffById(id);
-            if (staff == null)
-            {
-                return NotFound(new { message = "Staff not found" });
-            }
-            return new OkObjectResult(JsonConvert.SerializeObject(staff));
-        }
-
-        [HttpGet("defaults/{role}/{contractType}")]
-        public async Task<IActionResult> GetDefaultPayRate(string role, string contractType)
-        {
-            var payRateInfo = PayRateServices.GetDefaultPayRateForRoleContract(role, contractType);
-            if (payRateInfo == null)
-            {
-                return NotFound(new { message = "No default pay rate found for this role and contract type" });
-            }
-            return new OkObjectResult(JsonConvert.SerializeObject(payRateInfo));
-        }
-
         [HttpGet("defaults")]
         public async Task<IActionResult> GetAllDefaultPayRates()
         {

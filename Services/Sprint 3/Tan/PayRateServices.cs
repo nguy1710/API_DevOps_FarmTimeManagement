@@ -5,14 +5,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint3.Tan
 {
     public static class PayRateServices
     {
-        public static async Task<List<Staff>> GetAllStaffWithPayRates()
-        {
-            var staffConnects = new StaffConnects();
-            var query = @"SELECT * FROM [Staff] ORDER BY [Role], [ContractType], [StaffId]";
-            return await staffConnects.QueryStaff(query);
-        }
-
-        public static async Task<List<Staff>> GetStaffByRoleAndContract(string role, string contractType)
+        private static async Task<List<Staff>> GetStaffByRoleAndContract(string role, string contractType)
         {
             var staffConnects = new StaffConnects();
             var query = $@"SELECT * FROM [Staff]
