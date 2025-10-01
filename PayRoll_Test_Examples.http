@@ -1,0 +1,98 @@
+### PayRoll API Test Examples
+### Base URL: https://localhost:7XXX or http://localhost:5XXX
+
+###############################################
+### 1. Calculate Payroll - Basic Request (Use current pay rate)
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 1,
+  "mondayDate": "2024-12-30"
+}
+
+###############################################
+### 2. Calculate Payroll - With Special Pay Rate (Use default award rate)
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 1,
+  "mondayDate": "2024-12-30",
+  "isSpecialPayRate": true
+}
+
+###############################################
+### 3. Calculate Payroll - Explicitly set isSpecialPayRate to false
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 2,
+  "mondayDate": "2025-01-06",
+  "isSpecialPayRate": false
+}
+
+###############################################
+### 4. Test Error - Invalid Date (Not a Monday)
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 1,
+  "mondayDate": "2024-12-31"
+}
+### Expected: 400 Bad Request - "Error: The provided date is not a Monday"
+
+###############################################
+### 5. Test Error - Staff Not Found
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 9999,
+  "mondayDate": "2024-12-30"
+}
+### Expected: 404 Not Found - "Staff with ID 9999 not found"
+
+###############################################
+### 6. Test Error - Invalid Date Format
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 1,
+  "mondayDate": "30-12-2024"
+}
+### Expected: 400 Bad Request - "Invalid date format. Use format: yyyy-MM-dd"
+
+###############################################
+### 7. Calculate Payroll - Different Staff Member
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 3,
+  "mondayDate": "2025-01-13",
+  "isSpecialPayRate": true
+}
+
+###############################################
+### 8. Calculate Payroll - Manager with Special Rate
+###############################################
+POST https://localhost:7081/api/payroll/calculate
+Content-Type: application/json
+
+{
+  "staffId": 5,
+  "mondayDate": "2025-01-20",
+  "isSpecialPayRate": true
+}
+
