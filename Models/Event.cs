@@ -8,5 +8,6 @@
         public int? DeviceId { get; set; }          // FK -> Device(DeviceId), có thể null
         public string EventType { get; set; } = null!; // c
         public string? Reason { get; set; }
+                
     }
 }
