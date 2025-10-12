@@ -19,7 +19,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_3.Tom
                 if (defaultPayRate != null)
                 {
                     staff.StandardPayRate = defaultPayRate.StandardRate;
-                    staff.OvertimePayRate = defaultPayRate.OvertimeRate;
+                    // Note: OvertimePayRate is calculated as 1.5x StandardPayRate in CalculatePayRollWeek
                 }
             }
 
