@@ -90,7 +90,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint3.Tan
                     ["Part-time"] = new PayRateInfo { StandardRate = 25.00m, OvertimeRate = 37.50m },
                     ["Casual"] = new PayRateInfo { StandardRate = 31.25m, OvertimeRate = 46.87m }
                 },
-                ["Manager"] = new Dictionary<string, PayRateInfo>
+                ["Admin"] = new Dictionary<string, PayRateInfo>
                 {
                     ["Full-time"] = new PayRateInfo { StandardRate = 35.00m, OvertimeRate = 52.50m },
                     ["Part-time"] = new PayRateInfo { StandardRate = 35.00m, OvertimeRate = 52.50m },

@@ -56,7 +56,7 @@ GET /api/payrates/defaults
       "weekendRate": 62.50
     }
   },
-  "Manager": {
+  "Admin": {
     "Full-time": {
       "standardRate": 35.00,
       "overtimeRate": 52.50,
@@ -152,7 +152,7 @@ Content-Type: application/json
 **Auth Required**: Yes (Admin role)
 
 **URL Parameters:**
-- `role` (string): "Worker" or "Manager"
+- `role` (string): "Worker" or "Admin"
 - `contractType` (string): "Full-time", "Part-time", or "Casual"
 
 **Request Body:**
@@ -193,9 +193,9 @@ curl -X PUT http://localhost:5000/api/payrates/bulk/Worker/Full-time \
 | Worker | Full-time |
 | Worker | Part-time |
 | Worker | Casual |
-| Manager | Full-time |
-| Manager | Part-time |
-| Manager | Casual |
+| Admin | Full-time |
+| Admin | Part-time |
+| Admin | Casual |
 
 ---
 
@@ -246,7 +246,7 @@ curl -X POST http://localhost:5000/api/payrates/initialize-defaults \
 | Part-time | $25.00/hr | $37.50/hr | $50.00/hr |
 | Casual | $31.25/hr | $46.87/hr | $62.50/hr |
 
-#### Manager Rates
+#### Admin Rates
 | Contract Type | Standard Rate | Overtime Rate | Weekend Rate |
 |---------------|---------------|---------------|--------------|
 | Full-time | $35.00/hr | $52.50/hr | $70.00/hr |
@@ -472,7 +472,7 @@ const updateStaffRate = async (staffId, standardRate, overtimeRate) => {
 import { useState } from 'react';
 import axios from 'axios';
 
-function PayRateManager() {
+function PayRateManagement() {
   const [defaultRates, setDefaultRates] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -541,7 +541,7 @@ function PayRateManager() {
 
   return (
     <div>
-      <h2>Pay Rate Manager</h2>
+      <h2>Pay Rate Management</h2>
       
       <button onClick={loadDefaults}>Load Default Rates</button>
       <button onClick={initializeDefaults} disabled={loading}>
@@ -596,7 +596,7 @@ function PayRateManager() {
 - ✅ User is authenticated (has JWT token)
 - ✅ User has Admin role
 - ✅ Staff ID exists (for individual updates)
-- ✅ Role is "Worker" or "Manager"
+- ✅ Role is "Worker" or "Admin"
 - ✅ ContractType is "Full-time", "Part-time", or "Casual"
 - ✅ Pay rates are positive numbers
 
