@@ -159,8 +159,8 @@ GET /api/payroll/calculate?staffId=1&mondayDate=2024-12-30&isSpecialPayRate=true
 Uses default Horticulture Award 2025 rates based on staff's Role and ContractType:
 - Worker Full-time/Part-time: $25.00/hr
 - Worker Casual: $31.25/hr
-- Manager Full-time/Part-time: $35.00/hr
-- Manager Casual: $43.75/hr
+- Admin Full-time/Part-time: $35.00/hr
+- Admin Casual: $43.75/hr
 
 ### Example 3: Explicitly Disable Special Pay Rate
 **Request:**
