@@ -32,7 +32,8 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint3.Tan
 
             // Update the pay rates
             existingStaff.StandardPayRate = standardPayRate;
-            existingStaff.OvertimePayRate = overtimePayRate;
+            // Note: OvertimePayRate parameter is kept for API compatibility but not stored in Staff model
+            // Overtime rates are calculated dynamically (1.5x, 2x) in PayRoll calculations
 
             return await staffConnects.UpdateStaff(staffId, existingStaff);
         }
@@ -47,7 +48,8 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint3.Tan
             foreach (var staff in staffList)
             {
                 staff.StandardPayRate = standardPayRate;
-                staff.OvertimePayRate = overtimePayRate;
+                // Note: OvertimePayRate parameter is kept for API compatibility but not stored in Staff model
+                // Overtime rates are calculated dynamically (1.5x, 2x) in PayRoll calculations
                 var updated = await staffConnects.UpdateStaff(staff.StaffId, staff);
                 updatedStaff.Add(updated);
             }

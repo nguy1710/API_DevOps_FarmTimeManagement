@@ -20,23 +20,19 @@ DBCC CHECKIDENT ('Staff', RESEED, 0);
 
 -- Thêm Staff 1: Elon Musk (Admin)
 INSERT INTO Staff
-(FirstName, LastName, Email, Phone, [Password], [Address], ContractType, [Role],
- StandardHoursPerWeek, StandardPayRate, OvertimePayRate, IsActive)
+(FirstName, LastName, Email, Phone, [Password], [Address], ContractType, [Role], StandardPayRate, IsActive)
 VALUES
 (N'Elon', N'Musk', N'admin@adelaidefarm.com', N'0988136755',
  N'8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918',
- N'12 King William St, Adelaide SA 5000', N'Full-time', N'Admin',
- 38.00, 35.00, 52.50, 1);
+ N'12 King William St, Adelaide SA 5000', N'Full-time', N'Admin', 35.00, 1);
 
 -- Thêm Staff 2: John Smith (Worker)
 INSERT INTO Staff
-(FirstName, LastName, Email, Phone, [Password], [Address], ContractType, [Role],
- StandardHoursPerWeek, StandardPayRate, OvertimePayRate, IsActive)
+(FirstName, LastName, Email, Phone, [Password], [Address], ContractType, [Role], StandardPayRate, IsActive)
 VALUES
 (N'John', N'Smith', N'john.smith@adelaidefarm.com', N'0988123456',
  N'8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', -- tạm dùng cùng hash pass
- N'34 North Terrace, Adelaide SA 5000', N'Full-time', N'Worker',
- 38.00, 25.00, 37.50, 1);
+ N'34 North Terrace, Adelaide SA 5000', N'Full-time', N'Worker', 25.00, 1);
 
 -- ===================================================================
 -- INSERT CLOCK IN/OUT EVENTS FOR JOHN SMITH (StaffId = 2)

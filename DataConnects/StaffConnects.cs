@@ -27,9 +27,7 @@ namespace RestfulAPI_FarmTimeManagement.DataConnects
             int iAddr = rd.GetOrdinal("Address");
             int iCt = rd.GetOrdinal("ContractType");
             int iRole = rd.GetOrdinal("Role");
-            int iStdH = rd.GetOrdinal("StandardHoursPerWeek");
             int iStdP = rd.GetOrdinal("StandardPayRate");
-            int iOvtP = rd.GetOrdinal("OvertimePayRate");
             int iPwd = rd.GetOrdinal("Password");
 
             return new Staff
@@ -43,9 +41,7 @@ namespace RestfulAPI_FarmTimeManagement.DataConnects
                 Address = GetNullable<string>(rd, iAddr),
                 ContractType = GetNullable<string>(rd, iCt),
                 Role = GetNullable<string>(rd, iRole),
-                StandardHoursPerWeek = GetNullable<decimal>(rd, iStdH),
-                StandardPayRate = GetNullable<decimal>(rd, iStdP),
-                OvertimePayRate = GetNullable<decimal>(rd, iOvtP)
+                StandardPayRate = GetNullable<decimal>(rd, iStdP)
             };
         }
 
@@ -77,12 +73,10 @@ namespace RestfulAPI_FarmTimeManagement.DataConnects
         {
             const string sql = @"
 INSERT INTO Staff
-(FirstName, LastName, Email, Phone, Address, ContractType, Role,
- StandardHoursPerWeek, StandardPayRate, OvertimePayRate, Password)
+(FirstName, LastName, Email, Phone, Address, ContractType, Role, StandardPayRate, Password)
 OUTPUT INSERTED.*
 VALUES
-(@FirstName, @LastName, @Email, @Phone, @Address, @ContractType, @Role,
- @StandardHoursPerWeek, @StandardPayRate, @OvertimePayRate, @Password);";
+(@FirstName, @LastName, @Email, @Phone, @Address, @ContractType, @Role, @StandardPayRate, @Password);";
 
             await using var conn = Conn();
             await conn.OpenAsync();
@@ -96,9 +90,7 @@ VALUES
             cmd.Parameters.AddWithValue("@Address", (object?)staff.Address ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@ContractType", (object?)staff.ContractType ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Role", (object?)staff.Role ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@StandardHoursPerWeek", (object?)staff.StandardHoursPerWeek ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@StandardPayRate", (object?)staff.StandardPayRate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OvertimePayRate", (object?)staff.OvertimePayRate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Password", (object?)staff.Password ?? DBNull.Value);
 
             await using var rd = await cmd.ExecuteReaderAsync();
@@ -112,17 +104,15 @@ VALUES
         {
             const string sql = @"
 UPDATE Staff
-SET FirstName            = @FirstName,
-    LastName             = @LastName,
-    Email                = @Email,
-    Phone                = @Phone,
-    Address              = @Address,
-    ContractType         = @ContractType,
-    Role                 = @Role,
-    StandardHoursPerWeek = @StandardHoursPerWeek,
-    StandardPayRate      = @StandardPayRate,
-    OvertimePayRate      = @OvertimePayRate,
-    Password             = @Password
+SET FirstName       = @FirstName,
+    LastName        = @LastName,
+    Email           = @Email,
+    Phone           = @Phone,
+    Address         = @Address,
+    ContractType    = @ContractType,
+    Role            = @Role,
+    StandardPayRate = @StandardPayRate,
+    Password        = @Password
 OUTPUT INSERTED.*
 WHERE StaffId = @StaffId;";
 
@@ -138,9 +128,7 @@ WHERE StaffId = @StaffId;";
             cmd.Parameters.AddWithValue("@Address", (object?)staff.Address ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@ContractType", (object?)staff.ContractType ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Role", (object?)staff.Role ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@StandardHoursPerWeek", (object?)staff.StandardHoursPerWeek ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@StandardPayRate", (object?)staff.StandardPayRate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OvertimePayRate", (object?)staff.OvertimePayRate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Password", (object?)staff.Password ?? DBNull.Value);
 
             await using var rd = await cmd.ExecuteReaderAsync();
