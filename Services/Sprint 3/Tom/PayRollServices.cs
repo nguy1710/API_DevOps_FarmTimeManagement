@@ -7,25 +7,10 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_3.Tom
     public static class PayRollServices
     { 
 
-        public static async Task<PayrollSummary> CalculateCompletePayroll(DateTime Monday_date, Staff staff,bool is_SpecicalPayrate = false )
+        public static async Task<PayrollSummary> CalculateCompletePayroll(DateTime date, Staff staff,bool is_SpecicalPayrate = false )
         {
-            // Validate that the date is a Monday
-            if (Monday_date.DayOfWeek != DayOfWeek.Monday)
-            {
-                return new PayrollSummary
-                {
-                    StaffId = -1,
-                    StaffName = "Error: The provided date is not a Monday",
-                    WeekStartDate = Monday_date,
-                    TotalHoursWorked = 0,
-                    GrossWeeklyPay = 0,
-                    AnnualIncome = 0,
-                    AnnualTax = 0,
-                    WeeklyPAYG = 0,
-                    NetPay = 0,
-                    EmployerSuperannuation = 0
-                };
-            }
+            // Get the actual Monday of the week for the provided date
+            DateTime actualMonday = GetMondayOfWeek(date);
 
             // Apply special pay rate if requested
             if (is_SpecicalPayrate)
@@ -39,11 +24,11 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_3.Tom
             }
 
             // Calculate total hours worked using private helper method
-            List<HoursWperDayofWeek> weekHours = await CalculateWeeklyHours(Monday_date, staff.StaffId);
+            List<HoursWperDayofWeek> weekHours = await CalculateWeeklyHours(actualMonday, staff.StaffId);
             decimal totalHours = weekHours.Sum(h => h.HoursWorked);
 
             // Step 1: Calculate Gross Weekly Pay
-            decimal grossWeeklyPay = await CalculatePayRollWeek(Monday_date, staff);
+            decimal grossWeeklyPay = await CalculatePayRollWeek(actualMonday, staff);
 
             // Step 2: Calculate Annual Income
             decimal annualIncome = CalculateAnnualIncome(grossWeeklyPay);
@@ -62,7 +47,7 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_3.Tom
             {
                 StaffId = staff.StaffId,
                 StaffName = $"{staff.FirstName} {staff.LastName}",
-                WeekStartDate = Monday_date,
+                WeekStartDate = actualMonday,
                 TotalHoursWorked = totalHours,
                 GrossWeeklyPay = grossWeeklyPay,
                 AnnualIncome = annualIncome,
@@ -71,6 +56,18 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_3.Tom
                 NetPay = netPay,
                 EmployerSuperannuation = superannuation
             };
+        }
+
+
+        // Private helper method to get the Monday of the week for any given date
+        private static DateTime GetMondayOfWeek(DateTime date)
+        {
+            // Calculate how many days since Monday
+            // DayOfWeek: Sunday=0, Monday=1, Tuesday=2, ..., Saturday=6
+            int daysSinceMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            
+            // Return the Monday of that week
+            return date.Date.AddDays(-daysSinceMonday);
         }
 
 
@@ -304,8 +301,8 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_3.Tom
 
         // Step 5: Calculate Employer Superannuation
         // Superannuation = Gross Pay × Superannuation Guarantee (SG) Rate
-        // Current SG = 11.5% from 1 July 2025
-        private static decimal CalculateEmployerSuperannuation(decimal grossPay, decimal sgRate = 0.115m)
+        // Current SG = 12% from 1 July 2025
+        private static decimal CalculateEmployerSuperannuation(decimal grossPay, decimal sgRate = 0.12m)
         {
             return grossPay * sgRate;
         }
