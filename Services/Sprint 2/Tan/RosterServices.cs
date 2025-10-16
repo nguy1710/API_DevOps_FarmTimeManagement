@@ -178,6 +178,106 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tan
         }
 
         /// <summary>
+        /// Gets schedules for a specific staff member with date range filtering
+        /// PBI: Worker Roster Viewing - Filter by current and upcoming weeks
+        /// </summary>
+        public static async Task<List<WorkSchedule>> GetSchedulesByStaffIdWithDateRange(int staffId, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            var workScheduleConnects = new WorkScheduleConnects();
+
+            // Build query with optional date filtering
+            string query = $"SELECT * FROM WorkSchedule WHERE StaffId = {staffId}";
+
+            if (startDate.HasValue)
+            {
+                query += $" AND StartTime >= '{startDate.Value:yyyy-MM-dd}'";
+            }
+
+            if (endDate.HasValue)
+            {
+                // Add one day to include the entire end date
+                var endDateInclusive = endDate.Value.AddDays(1);
+                query += $" AND StartTime < '{endDateInclusive:yyyy-MM-dd}'";
+            }
+
+            query += " ORDER BY StartTime";
+
+            return await workScheduleConnects.QueryWorkSchedule(query);
+        }
+
+        /// <summary>
+        /// Gets schedules for the current week (Monday to Sunday) for a specific staff member
+        /// </summary>
+        public static async Task<List<WorkSchedule>> GetCurrentWeekSchedules(int staffId)
+        {
+            var today = DateTime.Today;
+            var currentWeekMonday = GetMondayOfWeek(today);
+            var currentWeekSunday = currentWeekMonday.AddDays(6);
+
+            return await GetSchedulesByStaffIdWithDateRange(staffId, currentWeekMonday, currentWeekSunday);
+        }
+
+        /// <summary>
+        /// Gets schedules for upcoming weeks (from today onwards) for a specific staff member
+        /// </summary>
+        public static async Task<List<WorkSchedule>> GetUpcomingSchedules(int staffId, int weeksAhead = 4)
+        {
+            var today = DateTime.Today;
+            var endDate = today.AddDays(7 * weeksAhead);
+
+            return await GetSchedulesByStaffIdWithDateRange(staffId, today, endDate);
+        }
+
+        /// <summary>
+        /// Gets schedules for a specific week (Monday to Sunday) for a staff member
+        /// </summary>
+        public static async Task<List<WorkSchedule>> GetWeekSchedules(int staffId, DateTime weekDate)
+        {
+            var weekMonday = GetMondayOfWeek(weekDate);
+            var weekSunday = weekMonday.AddDays(6);
+
+            return await GetSchedulesByStaffIdWithDateRange(staffId, weekMonday, weekSunday);
+        }
+
+        /// <summary>
+        /// Helper method to get the Monday of a given week
+        /// </summary>
+        private static DateTime GetMondayOfWeek(DateTime date)
+        {
+            var dayOfWeek = date.DayOfWeek;
+            var daysToSubtract = dayOfWeek == DayOfWeek.Sunday ? 6 : (int)dayOfWeek - 1;
+            return date.AddDays(-daysToSubtract).Date;
+        }
+
+        /// <summary>
+        /// Validates that a worker can only access their own roster
+        /// Returns the staffId if authorized, throws exception otherwise
+        /// </summary>
+        public static int ValidateWorkerAccess(int requestedStaffId, HttpContext httpContext)
+        {
+            var currentStaff = httpContext.Items["Staff"] as Staff;
+
+            if (currentStaff == null)
+            {
+                throw new UnauthorizedAccessException("Authentication required");
+            }
+
+            // Admins can view any roster
+            if (currentStaff.Role == "Admin")
+            {
+                return requestedStaffId;
+            }
+
+            // Workers can only view their own roster
+            if (currentStaff.StaffId != requestedStaffId)
+            {
+                throw new UnauthorizedAccessException("Workers can only view their own roster");
+            }
+
+            return requestedStaffId;
+        }
+
+        /// <summary>
         /// Updates an existing schedule with validation
         /// </summary>
         public static async Task<WorkSchedule> UpdateSchedule(int scheduleId, WorkSchedule updatedSchedule, HttpContext httpContext)

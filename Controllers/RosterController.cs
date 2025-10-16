@@ -69,14 +69,141 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
         /// <summary>
         /// GET: api/roster/staff/{staffId} - Gets all schedules for a specific staff member
+        /// Query parameters: startDate (yyyy-MM-dd), endDate (yyyy-MM-dd)
+        /// Workers can only view their own roster, Admins can view any roster
         /// </summary>
+        [Authorize]
         [HttpGet("staff/{staffId:int}")]
-        public async Task<IActionResult> GetByStaffId(int staffId)
+        public async Task<IActionResult> GetByStaffId(int staffId, [FromQuery] string? startDate = null, [FromQuery] string? endDate = null)
         {
             try
             {
-                var schedules = await RosterServices.GetSchedulesByStaffId(staffId);
+                // Validate worker access (workers can only view their own roster)
+                RosterServices.ValidateWorkerAccess(staffId, HttpContext);
+
+                // Parse optional date parameters
+                DateTime? parsedStartDate = null;
+                DateTime? parsedEndDate = null;
+
+                if (!string.IsNullOrEmpty(startDate))
+                {
+                    if (!DateTime.TryParse(startDate, out var tempStartDate))
+                    {
+                        return BadRequest(new { message = "Invalid startDate format. Use yyyy-MM-dd" });
+                    }
+                    parsedStartDate = tempStartDate;
+                }
+
+                if (!string.IsNullOrEmpty(endDate))
+                {
+                    if (!DateTime.TryParse(endDate, out var tempEndDate))
+                    {
+                        return BadRequest(new { message = "Invalid endDate format. Use yyyy-MM-dd" });
+                    }
+                    parsedEndDate = tempEndDate;
+                }
+
+                // Get schedules with optional date filtering
+                var schedules = await RosterServices.GetSchedulesByStaffIdWithDateRange(staffId, parsedStartDate, parsedEndDate);
                 return new OkObjectResult(JsonConvert.SerializeObject(schedules));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/roster/staff/{staffId}/current-week - Gets current week schedule for a staff member
+        /// Returns Monday to Sunday of the current week
+        /// </summary>
+        [Authorize]
+        [HttpGet("staff/{staffId:int}/current-week")]
+        public async Task<IActionResult> GetCurrentWeek(int staffId)
+        {
+            try
+            {
+                // Validate worker access
+                RosterServices.ValidateWorkerAccess(staffId, HttpContext);
+
+                var schedules = await RosterServices.GetCurrentWeekSchedules(staffId);
+                return new OkObjectResult(JsonConvert.SerializeObject(schedules));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/roster/staff/{staffId}/upcoming - Gets upcoming schedules for a staff member
+        /// Query parameter: weeks (default: 4) - number of weeks ahead to retrieve
+        /// </summary>
+        [Authorize]
+        [HttpGet("staff/{staffId:int}/upcoming")]
+        public async Task<IActionResult> GetUpcoming(int staffId, [FromQuery] int weeks = 4)
+        {
+            try
+            {
+                // Validate worker access
+                RosterServices.ValidateWorkerAccess(staffId, HttpContext);
+
+                if (weeks < 1 || weeks > 52)
+                {
+                    return BadRequest(new { message = "Weeks parameter must be between 1 and 52" });
+                }
+
+                var schedules = await RosterServices.GetUpcomingSchedules(staffId, weeks);
+                return new OkObjectResult(JsonConvert.SerializeObject(schedules));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/roster/staff/{staffId}/week - Gets schedules for a specific week
+        /// Query parameter: date (yyyy-MM-dd) - any date in the desired week
+        /// Returns Monday to Sunday of that week
+        /// </summary>
+        [Authorize]
+        [HttpGet("staff/{staffId:int}/week")]
+        public async Task<IActionResult> GetWeek(int staffId, [FromQuery] string? date = null)
+        {
+            try
+            {
+                // Validate worker access
+                RosterServices.ValidateWorkerAccess(staffId, HttpContext);
+
+                // Parse date parameter (defaults to today if not provided)
+                DateTime weekDate = DateTime.Today;
+                if (!string.IsNullOrEmpty(date))
+                {
+                    if (!DateTime.TryParse(date, out weekDate))
+                    {
+                        return BadRequest(new { message = "Invalid date format. Use yyyy-MM-dd" });
+                    }
+                }
+
+                var schedules = await RosterServices.GetWeekSchedules(staffId, weekDate);
+                return new OkObjectResult(JsonConvert.SerializeObject(schedules));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
