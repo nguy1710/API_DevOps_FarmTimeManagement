@@ -71,11 +71,22 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
         /// GET: api/roster/staff/{staffId} - Gets all schedules for a specific staff member
         /// </summary>
         [HttpGet("staff/{staffId:int}")]
-        public async Task<IActionResult> GetByStaffId(int staffId)
+        public async Task<IActionResult> GetByStaffId(int staffId, [FromQuery] string? weekStartDate)
         {
             try
             {
-                var schedules = await RosterServices.GetSchedulesByStaffId(staffId);
+                DateTime? parsedWeekStartDate = null;
+                
+                if (!string.IsNullOrEmpty(weekStartDate))
+                {
+                    if (!DateTime.TryParseExact(weekStartDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                    {
+                        return BadRequest(new { message = "weekStartDate must be in yyyy-MM-dd format" });
+                    }
+                    parsedWeekStartDate = parsedDate;
+                }
+
+                var schedules = await RosterServices.GetSchedulesByStaffId(staffId, parsedWeekStartDate);
                 return new OkObjectResult(JsonConvert.SerializeObject(schedules));
             }
             catch (Exception ex)

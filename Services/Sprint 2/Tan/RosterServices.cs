@@ -171,10 +171,38 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tan
         /// <summary>
         /// Gets schedules for a specific staff member
         /// </summary>
-        public static async Task<List<WorkSchedule>> GetSchedulesByStaffId(int staffId)
+        public static async Task<List<WorkSchedule>> GetSchedulesByStaffId(int staffId, DateTime? weekStartDate = null)
         {
             var workScheduleConnects = new WorkScheduleConnects();
-            return await workScheduleConnects.QueryWorkSchedule($"SELECT * FROM WorkSchedule WHERE StaffId = {staffId} ORDER BY StartTime");
+            
+            if (weekStartDate.HasValue)
+            {
+                // Calculate the start and end of the week (Monday to Sunday)
+                var weekStart = GetWeekStart(weekStartDate.Value);
+                var weekEnd = weekStart.AddDays(7);
+                
+                var query = $@"
+                    SELECT * FROM WorkSchedule 
+                    WHERE StaffId = {staffId}
+                    AND StartTime >= '{weekStart:yyyy-MM-dd 00:00:00}'
+                    AND StartTime < '{weekEnd:yyyy-MM-dd 00:00:00}'
+                    ORDER BY StartTime";
+                
+                return await workScheduleConnects.QueryWorkSchedule(query);
+            }
+            else
+            {
+                return await workScheduleConnects.QueryWorkSchedule($"SELECT * FROM WorkSchedule WHERE StaffId = {staffId} ORDER BY StartTime");
+            }
+        }
+
+        /// <summary>
+        /// Gets the start of the week (Monday) for a given date
+        /// </summary>
+        private static DateTime GetWeekStart(DateTime date)
+        {
+            var daysSinceMonday = ((int)date.DayOfWeek - 1 + 7) % 7;
+            return date.Date.AddDays(-daysSinceMonday);
         }
 
         /// <summary>
