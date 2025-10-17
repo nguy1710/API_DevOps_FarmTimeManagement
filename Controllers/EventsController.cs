@@ -34,6 +34,34 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
             return new OkObjectResult(JsonConvert.SerializeObject(evt));
         }
 
+        /// <summary>
+        /// GET: api/events/staff/{staffId} - Gets all events for a specific staff member
+        /// </summary>
+        [HttpGet("staff/{staffId:int}")]
+        public async Task<IActionResult> GetByStaffId(int staffId, [FromQuery] string? weekStartDate)
+        {
+            try
+            {
+                DateTime? parsedWeekStartDate = null;
+                
+                if (!string.IsNullOrEmpty(weekStartDate))
+                {
+                    if (!DateTime.TryParseExact(weekStartDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                    {
+                        return BadRequest(new { message = "weekStartDate must be in yyyy-MM-dd format" });
+                    }
+                    parsedWeekStartDate = parsedDate;
+                }
+
+                var events = await EventServices.GetEventsByStaffId(staffId, parsedWeekStartDate);
+                return new OkObjectResult(JsonConvert.SerializeObject(events));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
 
 
         // POST: api/events
