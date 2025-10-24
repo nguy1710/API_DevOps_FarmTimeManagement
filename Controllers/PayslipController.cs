@@ -49,6 +49,64 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
         }
 
         /// <summary>
+        /// POST: api/payslip/create-special - Creates a payslip with custom date range and pay rate
+        /// </summary>
+        [HttpPost("create-payslip-special")]
+        public async Task<IActionResult> CreatePayslip_Special([FromBody] CreatePayslipSpecialRequest request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest("Request body is required");
+                }
+
+                if (request.StaffId <= 0)
+                {
+                    return BadRequest("StaffId must be greater than 0");
+                }
+
+                if (request.StandardPayRate <= 0)
+                {
+                    return BadRequest("StandardPayRate must be greater than 0");
+                }
+
+                if (request.DateStart == default(DateTime))
+                {
+                    return BadRequest("DateStart is required");
+                }
+
+                if (request.DateEnd == default(DateTime))
+                {
+                    return BadRequest("DateEnd is required");
+                }
+
+                if (request.DateEnd < request.DateStart)
+                {
+                    return BadRequest("DateEnd must be after DateStart");
+                }
+
+                var payslip = await PayslipServices.CreatePayslip_Special(
+                    request.StaffId,
+                    request.StandardPayRate,
+                    request.DateStart,
+                    request.DateEnd
+                );
+
+                if (payslip == null)
+                {
+                    return BadRequest("Failed to create payslip. Staff may not exist.");
+                }
+
+                return Ok(payslip);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        /// <summary>
         /// DELETE: api/payslip/{payslipId} - Deletes a payslip by ID
         /// </summary>
         [HttpDelete("{payslipId:int}")]
@@ -121,5 +179,13 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
     {
         public int StaffId { get; set; }
         public DateTime WeekStartDate { get; set; }
+    }
+
+    public class CreatePayslipSpecialRequest
+    {
+        public int StaffId { get; set; }
+        public decimal StandardPayRate { get; set; }
+        public DateTime DateStart { get; set; }
+        public DateTime DateEnd { get; set; }
     }
 }
