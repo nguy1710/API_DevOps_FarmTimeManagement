@@ -238,6 +238,126 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_4.Tom
         }
 
         /// <summary>
+        /// Creates a payslip for a staff member with custom date range and pay rate
+        /// </summary>
+        /// <param name="staffId">Staff member ID</param>
+        /// <param name="standardPayRate">Custom pay rate for this payslip</param>
+        /// <param name="dateStart">Start date of the period</param>
+        /// <param name="dateEnd">End date of the period</param>
+        /// <returns>Created Payslip object or null if failed</returns>
+        public static async Task<Payslip?> CreatePayslip_Special(int staffId, decimal standardPayRate, DateTime dateStart, DateTime dateEnd)
+        {
+            try
+            {
+                // Step 1: Get staff information
+                var staff = await StaffsServices.GetStaffById(staffId);
+                if (staff == null)
+                {
+                    return null; // Staff not found
+                }
+
+                // Step 2: Calculate total hours worked for the custom date range
+                var totalHoursWorked = await CalculateTotalHourWorker_CustomRange(staffId, dateStart, dateEnd);
+
+                // Step 3: Calculate gross pay using custom pay rate
+                var grossPay = totalHoursWorked * standardPayRate;
+
+                // Step 4: Calculate weekly equivalent for annual calculations
+                // If the period is not exactly 7 days, we need to normalize it
+                var daysInPeriod = (dateEnd - dateStart).Days + 1;
+                var weeklyEquivalent = grossPay * (7.0m / daysInPeriod);
+
+                // Step 5: Calculate other payroll values based on weekly equivalent
+                var annualIncome = weeklyEquivalent * 52;
+                var annualTax = CalculateAnnualTax(annualIncome);
+                var weeklyPAYG = annualTax / 52;
+                var netPay = grossPay - (weeklyPAYG * (daysInPeriod / 7.0m));
+                var employerSuperannuation = CalculateEmployerSuperannuation(grossPay);
+
+                // Step 6: Create new Payslip object
+                var newPayslip = new Payslip
+                {
+                    StaffId = staffId,
+                    StandardPayRate = standardPayRate,
+                    WeekStartDate = dateStart.Date,
+                    TotalHoursWorked = totalHoursWorked,
+                    GrossWeeklyPay = grossPay, // This is actually gross pay for the period
+                    AnnualIncome = annualIncome,
+                    AnnualTax = annualTax,
+                    WeeklyPAYG = weeklyPAYG,
+                    NetPay = netPay,
+                    EmployerSuperannuation = employerSuperannuation,
+                    DateCreated = DateTime.Now
+                };
+
+                // Step 7: Save to database
+                var payslipConnects = new PayslipConnects();
+                var createdPayslip = await payslipConnects.CreatePayslip(newPayslip);
+                return createdPayslip;
+            }
+            catch (Exception)
+            {
+                return null; // Return null on any error
+            }
+        }
+
+        /// <summary>
+        /// Calculates total hours worked for a custom date range
+        /// </summary>
+        /// <param name="staffId">Staff member ID</param>
+        /// <param name="dateStart">Start date of the period</param>
+        /// <param name="dateEnd">End date of the period</param>
+        /// <returns>Total hours worked (decimal)</returns>
+        private static async Task<decimal> CalculateTotalHourWorker_CustomRange(int staffId, DateTime dateStart, DateTime dateEnd)
+        {
+            // Step 1: Get all WorkSchedules within the date range
+            var workScheduleConnects = new WorkScheduleConnects();
+            var startDate = dateStart.Date;
+            var endDate = dateEnd.Date.AddDays(1); // Add 1 day to include the end date
+            
+            var query = $@"
+                SELECT * FROM WorkSchedule 
+                WHERE StaffId = {staffId}
+                AND StartTime >= '{startDate:yyyy-MM-dd 00:00:00}'
+                AND StartTime < '{endDate:yyyy-MM-dd 00:00:00}'
+                ORDER BY StartTime";
+            
+            var workSchedules = await workScheduleConnects.QueryWorkSchedule(query);
+
+            // Step 2: Get all Events within the date range
+            var eventConnects = new EventConnects();
+            var eventQuery = $@"
+                SELECT * FROM Event 
+                WHERE StaffId = {staffId}
+                AND Timestamp >= '{startDate:yyyy-MM-dd 00:00:00}'
+                AND Timestamp < '{endDate:yyyy-MM-dd 00:00:00}'
+                ORDER BY Timestamp";
+            
+            var events = await eventConnects.QueryEvent(eventQuery);
+
+            // Step 3: Initialize total hours
+            decimal totalHours = 0;
+
+            // Step 4: Add scheduled hours for each WorkSchedule
+            foreach (var schedule in workSchedules)
+            {
+                totalHours += schedule.ScheduleHours;
+
+                // Step 5: Check for Break events within this schedule's time range
+                var breakEvents = events.Where(e => 
+                    e.EventType == "Break" &&
+                    e.Timestamp >= schedule.StartTime &&
+                    e.Timestamp <= schedule.EndTime
+                ).ToList();
+
+                // Step 6: Deduct 0.5 hours for each Break event
+                totalHours -= breakEvents.Count * 0.5m;
+            }
+
+            return Math.Max(0, totalHours); // Ensure non-negative result
+        }
+
+        /// <summary>
         /// Gets the start of the week (Monday) for a given date
         /// </summary>
         private static DateTime GetWeekStart(DateTime date)
