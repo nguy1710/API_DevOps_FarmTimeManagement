@@ -120,3 +120,102 @@ INSERT INTO Staff (FirstName, LastName, Email, Phone, Password, Address, Contrac
 VALUES 
     ('Elon', 'Musk', 'admin@adelaidefarm.com', '0988136755', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', '12 King William St, Adelaide SA 5000', 'Full-time', 'Admin', 50.00),
     ('John', 'Smith', 'john.smith@adelaidefarm.com', '0988123456', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', '34 North Terrace, Adelaide SA 5000', 'Full-time', 'Worker', 25.00);
+
+-- Sample Device data
+INSERT INTO Device (Location, Type, Status)
+VALUES 
+    ('Gate A', 'Card', 'Online'),
+    ('Gate B', 'Card', 'Online');
+
+-- Sample WorkSchedule data for John Smith (Oct 13-17, 2025)
+INSERT INTO WorkSchedule (StaffId, StartTime, EndTime, ScheduleHours)
+VALUES 
+    (2, '2025-10-13 09:00:00', '2025-10-13 17:00:00', 8),
+    (2, '2025-10-14 09:00:00', '2025-10-14 17:00:00', 8),
+    (2, '2025-10-15 09:00:00', '2025-10-15 17:00:00', 8),
+    (2, '2025-10-16 09:00:00', '2025-10-16 17:00:00', 8),
+    (2, '2025-10-17 09:00:00', '2025-10-17 17:00:00', 8);
+
+-- Sample Biometric data for John Smith (StaffId = 2)
+INSERT INTO Biometric (StaffId, Type, Data)
+VALUES 
+    (2, 'Card', '123456789');
+
+-- Sample Event data for John Smith (Oct 13-17, 2025)
+-- Each day has: Clock in at 9AM, Break start at 12PM, Break end at 1PM, Clock out at 5PM
+-- DeviceId alternates between 1 and 2 for each day
+INSERT INTO Event (Timestamp, StaffId, DeviceId, EventType, Reason)
+VALUES 
+    -- Oct 13, 2025 (DeviceId = 1)
+    ('2025-10-13 09:00:00', 2, 1, 'Clock in', NULL),
+    ('2025-10-13 12:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-13 13:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-13 17:00:00', 2, 1, 'Clock out', NULL),
+    
+    -- Oct 14, 2025 (DeviceId = 2)
+    ('2025-10-14 09:00:00', 2, 2, 'Clock in', NULL),
+    ('2025-10-14 12:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-14 13:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-14 17:00:00', 2, 2, 'Clock out', NULL),
+    
+    -- Oct 15, 2025 (DeviceId = 1)
+    ('2025-10-15 09:00:00', 2, 1, 'Clock in', NULL),
+    ('2025-10-15 12:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-15 13:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-15 17:00:00', 2, 1, 'Clock out', NULL),
+    
+    -- Oct 16, 2025 (DeviceId = 2)
+    ('2025-10-16 09:00:00', 2, 2, 'Clock in', NULL),
+    ('2025-10-16 12:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-16 13:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-16 17:00:00', 2, 2, 'Clock out', NULL),
+    
+    -- Oct 17, 2025 (DeviceId = 1)
+    ('2025-10-17 09:00:00', 2, 1, 'Clock in', NULL),
+    ('2025-10-17 12:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-17 13:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-17 17:00:00', 2, 1, 'Clock out', NULL);
+
+-- Sample WorkSchedule data for John Smith (Oct 20-24, 2025)
+INSERT INTO WorkSchedule (StaffId, StartTime, EndTime, ScheduleHours)
+VALUES 
+    (2, '2025-10-20 09:00:00', '2025-10-20 17:00:00', 8),
+    (2, '2025-10-21 09:00:00', '2025-10-21 17:00:00', 8),
+    (2, '2025-10-22 09:00:00', '2025-10-22 17:00:00', 8),
+    (2, '2025-10-23 09:00:00', '2025-10-23 17:00:00', 8),
+    (2, '2025-10-24 09:00:00', '2025-10-24 17:00:00', 8);
+
+-- Sample Event data for John Smith (Oct 20-24, 2025)
+-- Each day has: Clock in at 9AM, Break start at 12PM, Break end at 1PM, Clock out at 5PM
+-- DeviceId alternates between 1 and 2 for each day
+INSERT INTO Event (Timestamp, StaffId, DeviceId, EventType, Reason)
+VALUES 
+    -- Oct 20, 2025 (DeviceId = 1)
+    ('2025-10-20 09:00:00', 2, 1, 'Clock in', NULL),
+    ('2025-10-20 12:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-20 13:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-20 17:00:00', 2, 1, 'Clock out', NULL),
+    
+    -- Oct 21, 2025 (DeviceId = 2)
+    ('2025-10-21 09:00:00', 2, 2, 'Clock in', NULL),
+    ('2025-10-21 12:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-21 13:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-21 17:00:00', 2, 2, 'Clock out', NULL),
+    
+    -- Oct 22, 2025 (DeviceId = 1)
+    ('2025-10-22 09:00:00', 2, 1, 'Clock in', NULL),
+    ('2025-10-22 12:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-22 13:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-22 17:00:00', 2, 1, 'Clock out', NULL),
+    
+    -- Oct 23, 2025 (DeviceId = 2)
+    ('2025-10-23 09:00:00', 2, 2, 'Clock in', NULL),
+    ('2025-10-23 12:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-23 13:00:00', 2, 2, 'Break', NULL),
+    ('2025-10-23 17:00:00', 2, 2, 'Clock out', NULL),
+    
+    -- Oct 24, 2025 (DeviceId = 1)
+    ('2025-10-24 09:00:00', 2, 1, 'Clock in', NULL),
+    ('2025-10-24 12:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-24 13:00:00', 2, 1, 'Break', NULL),
+    ('2025-10-24 17:00:00', 2, 1, 'Clock out', NULL);
