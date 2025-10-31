@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using RestfulAPI_FarmTimeManagement.Services.Sprint_4.Tom;
+using RestfulAPI_FarmTimeManagement.Models;
+using System.IO;
+using RestfulAPI_FarmTimeManagement.DataConnects;
 
 namespace RestfulAPI_FarmTimeManagement.Controllers
 {
@@ -166,6 +169,43 @@ namespace RestfulAPI_FarmTimeManagement.Controllers
 
                 var payslips = await PayslipServices.GetPayslipsByStaffId(staffId);
                 return Ok(payslips);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// GET: api/payslip/export/{payslipId} - Exports a payslip by ID to a Word document and returns it for download
+        /// </summary>
+        [HttpGet("export/{payslipId:int}")]
+        public async Task<IActionResult> ExportPayslipById(int payslipId)
+        {
+            try
+            {
+                if (payslipId <= 0)
+                {
+                    return BadRequest("PayslipId must be greater than 0");
+                }
+
+                var payslipConnects = new PayslipConnects();
+                var payslip = await payslipConnects.GetPayslipById(payslipId);
+                if (payslip == null)
+                {
+                    return NotFound("Payslip not found");
+                }
+
+                var outputPath = await PayslipServices.ExportPayslip(payslip);
+                if (string.IsNullOrWhiteSpace(outputPath) || !System.IO.File.Exists(outputPath))
+                {
+                    return BadRequest("Failed to export payslip");
+                }
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(outputPath);
+                var fileName = Path.GetFileName(outputPath);
+                const string contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                return File(fileBytes, contentType, fileName);
             }
             catch (Exception ex)
             {

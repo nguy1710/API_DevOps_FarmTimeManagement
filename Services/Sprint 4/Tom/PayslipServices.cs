@@ -3,6 +3,10 @@ using RestfulAPI_FarmTimeManagement.Models;
 using RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tan;
 using RestfulAPI_FarmTimeManagement.Services.Sprint_2.Tom;
 using RestfulAPI_FarmTimeManagement.Services.Sprint1.Tom;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using Xceed.Words.NET;
+using System.IO;
 
 namespace RestfulAPI_FarmTimeManagement.Services.Sprint_4.Tom
 {
@@ -364,6 +368,113 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_4.Tom
         {
             var daysSinceMonday = ((int)date.DayOfWeek - 1 + 7) % 7;
             return date.Date.AddDays(-daysSinceMonday);
+        }
+
+        /// <summary>
+        /// Export a payslip to a Word document based on the template at report/Payslip.docx.
+        /// Replaces placeholders with values from the provided Payslip and its Staff.
+        /// Returns the saved file path, or null if export fails.
+        /// </summary>
+        public static async Task<string?> ExportPayslip(Payslip payslip)
+        {
+            try
+            {
+                // Fetch Staff by StaffId from the payslip
+                var staff = await StaffsServices.GetStaffById(payslip.StaffId);
+                if (staff == null)
+                {
+                    return null;
+                }
+
+                // Resolve template and output paths
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var reportDir = Path.Combine(baseDir, "Report");
+                var templatePath = Path.Combine(reportDir, "Payslip.docx");
+                if (!File.Exists(templatePath))
+                {
+                    return null;
+                }
+
+                // Build output filename
+                var weekOrDate = payslip.WeekStartDate != default
+                    ? payslip.WeekStartDate.ToString("yyyyMMdd")
+                    : DateTime.Now.ToString("yyyyMMddHHmmss");
+                var staffNameSafe = (staff.FirstName + "_" + staff.LastName).Trim().Replace(' ', '_');
+                var outputFileName = $"Payslip_{staffNameSafe}_{weekOrDate}.docx";
+                var outputPath = Path.Combine(reportDir, outputFileName);
+
+                // Load template
+                using var doc = DocX.Load(templatePath);
+
+                // Prepare replacements from Staff and Payslip
+                var replacements = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                void AddObjectProps(object source, string prefix)
+                {
+                    if (source == null) return;
+                    var type = source.GetType();
+                    foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        var name = prop.Name;
+                        object? valueObj;
+                        try { valueObj = prop.GetValue(source); }
+                        catch { continue; }
+
+                        string valueStr = ConvertToString(valueObj);
+
+                        // Add with prefix (e.g., Staff.FirstName, Payslip.NetPay)
+                        var keyWithPrefix = $"{prefix}.{name}";
+                        if (!replacements.ContainsKey(keyWithPrefix))
+                            replacements[keyWithPrefix] = valueStr;
+
+                        // Add bare property for convenience (e.g., FirstName, NetPay)
+                        if (!replacements.ContainsKey(name))
+                            replacements[name] = valueStr;
+                    }
+                }
+
+                AddObjectProps(staff, "Staff");
+                AddObjectProps(payslip, "Payslip");
+
+                // Execute replacements. Support both plain names and {{Name}} patterns if present.
+                foreach (var kv in replacements)
+                {
+                    var key = kv.Key;
+                    var val = kv.Value ?? string.Empty;
+                    doc.ReplaceText(key, val, false, RegexOptions.IgnoreCase);
+                    doc.ReplaceText("{{" + key + "}}", val, false, RegexOptions.IgnoreCase);
+                }
+
+                // Save as output
+                doc.SaveAs(outputPath);
+                return outputPath;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string ConvertToString(object? value)
+        {
+            if (value == null) return string.Empty;
+            switch (value)
+            {
+                case DateTime dt:
+                    return dt.ToString("yyyy-MM-dd");
+                case DateTimeOffset dto:
+                    return dto.ToString("yyyy-MM-dd");
+                case decimal dec:
+                    return dec.ToString("0.##");
+                case double dbl:
+                    return dbl.ToString("0.##");
+                case float fl:
+                    return fl.ToString("0.##");
+                case bool b:
+                    return b ? "True" : "False";
+                default:
+                    return value.ToString() ?? string.Empty;
+            }
         }
 
     }

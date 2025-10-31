@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -7,10 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Report\Payslip.docx" />
     <None Remove="RestfulAPI_FarmTimeManagement.http" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DocX" Version="5.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.20" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -20,6 +22,12 @@
 
   <ItemGroup>
     <Folder Include="Services\Sprint 4\Tom\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Report\Payslip.docx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 
 
