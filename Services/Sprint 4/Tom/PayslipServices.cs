@@ -465,11 +465,11 @@ namespace RestfulAPI_FarmTimeManagement.Services.Sprint_4.Tom
                 case DateTimeOffset dto:
                     return dto.ToString("yyyy-MM-dd");
                 case decimal dec:
-                    return dec.ToString("0.##");
+                    return dec.ToString("#,##0.00");
                 case double dbl:
-                    return dbl.ToString("0.##");
+                    return dbl.ToString("#,##0.00");
                 case float fl:
-                    return fl.ToString("0.##");
+                    return fl.ToString("#,##0.00");
                 case bool b:
                     return b ? "True" : "False";
                 default:
